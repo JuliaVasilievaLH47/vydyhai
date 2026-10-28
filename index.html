@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Выдыхай</title>
+<meta name="description" content="Выдыхай — честно о сигаретах, вейпах и электронках для подростков. Консультации врачей и психологов, семинары.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Manrope:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: стикерный зин — толстые контуры, жёсткие тени, крупный шрифт, полосы-разделители с бегущей строкой */
+:root{
+  --paper:#ECEEFB; --card:#FFFFFF; --ink:#141224; --muted:#565472;
+  --hot:#FF4D2E; --cobalt:#3346FF; --lemon:#FFE040; --mint:#62D9B4;
+  --on-bright:#141224; --on-cobalt:#FFFFFF;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"Manrope","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --r:18px; --shadow:6px 6px 0 var(--ink);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#121120; --card:#1D1B30; --ink:#EFEEFA; --muted:#A9A6C4;
+  --hot:#FF6A4D; --cobalt:#6F7EFF; --lemon:#FFE040; --mint:#62D9B4;
+  --on-bright:#141224; --on-cobalt:#FFFFFF; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --paper:#121120; --card:#1D1B30; --ink:#EFEEFA; --muted:#A9A6C4;
+  --hot:#FF6A4D; --cobalt:#6F7EFF; --lemon:#FFE040; --mint:#62D9B4;
+  --on-bright:#141224; --on-cobalt:#FFFFFF; color-scheme:dark }
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 17px/1.55 var(--body)}
+img{max-width:100%}
+[hidden]{display:none!important}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--cobalt);outline-offset:3px;border-radius:6px}
+.wrap{max-width:1160px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+section{padding-block:72px}
+h1,h2,h3{font-family:var(--display);line-height:1.08;text-wrap:balance;margin:0}
+h2{font-size:clamp(28px,5vw,48px);font-weight:900;letter-spacing:-.01em}
+h3{font-size:20px;font-weight:700}
+p{margin:0}
+.lead{font-size:clamp(17px,2vw,20px);color:var(--muted);max-width:62ch}
+.eyebrow{font:700 13px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--hot)}
+.head{display:grid;gap:14px;margin-bottom:36px}
+.sticker{background:var(--card);border:3px solid var(--ink);border-radius:var(--r);box-shadow:var(--shadow)}
+.mark{background:var(--lemon);color:var(--on-bright);padding:0 .18em;border-radius:6px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+
+/* кнопки */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:700 16px/1 var(--body);padding:15px 22px;border:3px solid var(--ink);border-radius:999px;cursor:pointer;text-decoration:none;box-shadow:4px 4px 0 var(--ink);transition:transform .12s,box-shadow .12s;background:var(--card);color:var(--ink)}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--ink)}
+.btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+.btn-hot{background:var(--hot);color:var(--on-bright)}
+.btn-lemon{background:var(--lemon);color:var(--on-bright)}
+
+/* шапка */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--paper);border-bottom:3px solid var(--ink)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:12px}
+.logo{font:900 22px/1 var(--display);text-decoration:none;display:flex;align-items:center;gap:10px}
+.logo i{display:inline-block;width:30px;height:30px;border-radius:50%;background:var(--mint);border:3px solid var(--ink);position:relative}
+.logo i::after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--paper)}
+.nav{display:flex;gap:22px;font-weight:600;font-size:15px}
+.nav a{text-decoration:none}
+.nav a:hover{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.top .btn{padding:11px 18px;font-size:15px}
+@media (max-width:900px){.nav{display:none}}
+
+/* главный экран */
+.hero{padding-block:56px 64px}
+.hero .wrap{display:grid;grid-template-columns:1.25fr 1fr;gap:40px;align-items:center}
+.hero h1{font-size:clamp(40px,7.2vw,88px);font-weight:900;letter-spacing:-.02em}
+.hero h1 .strike{position:relative;white-space:nowrap}
+.hero h1 .strike::after{content:"";position:absolute;left:-4%;right:-4%;top:54%;height:.12em;background:var(--hot);transform:rotate(-4deg);border-radius:4px}
+.hero-copy{display:grid;gap:24px;min-width:0}
+.cta-row{display:flex;flex-wrap:wrap;gap:14px}
+.hero-art{position:relative;max-width:100%}
+.hero-art svg{width:100%;height:auto;display:block}
+.chip-row{display:flex;flex-wrap:wrap;gap:10px}
+.chip{font:600 14px/1 var(--body);padding:9px 13px;border:2px solid var(--ink);border-radius:999px;background:var(--card)}
+@media (max-width:820px){.hero .wrap{grid-template-columns:1fr}.hero-art{max-width:420px;margin:0 auto}}
+
+/* бегущая строка */
+.ticker{background:var(--ink);color:var(--paper);border-block:3px solid var(--ink);overflow:hidden;white-space:nowrap}
+.ticker-track{display:inline-flex;gap:44px;padding-block:14px;animation:run 38s linear infinite;font:700 15px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em}
+.ticker-track span::before{content:"✱";color:var(--lemon);margin-right:44px}
+@keyframes run{to{transform:translateX(-50%)}}
+
+/* числа */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.stat{padding:24px;display:grid;gap:10px;align-content:start}
+.stat b{font:900 clamp(36px,4.6vw,52px)/1 var(--display);font-variant-numeric:tabular-nums}
+.stat small{font:500 12px/1.4 var(--mono);color:var(--muted)}
+.stat:nth-child(1){background:var(--lemon);color:var(--on-bright)}
+.stat:nth-child(1) small{color:var(--on-bright);opacity:.7}
+.stat:nth-child(3){background:var(--cobalt);color:var(--on-cobalt)}
+.stat:nth-child(3) small{color:var(--on-cobalt);opacity:.8}
+@media (max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:480px){.stats{grid-template-columns:1fr}}
+
+/* состав */
+.inside{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.inside .sticker{padding:28px;display:grid;gap:18px;align-content:start;min-width:0}
+.tag{display:inline-block;font:700 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:7px 10px;border:2px solid var(--ink);border-radius:999px;justify-self:start}
+.bars{display:grid;gap:14px}
+.bar{display:grid;gap:6px}
+.bar-top{display:flex;justify-content:space-between;gap:12px;font-weight:600;font-size:15px}
+.bar-top span:last-child{font:500 13px/1.4 var(--mono);color:var(--muted);text-align:right}
+.bar-line{height:14px;border:2px solid var(--ink);border-radius:999px;overflow:hidden;background:var(--paper)}
+.bar-line i{display:block;height:100%;background:var(--hot)}
+@media (max-width:820px){.inside{grid-template-columns:1fr}}
+
+/* мозг */
+.brain{padding:32px;display:grid;gap:28px}
+.age-scale{position:relative;padding-top:64px;padding-bottom:30px}
+.age-line{height:22px;border:3px solid var(--ink);border-radius:999px;background:linear-gradient(90deg,var(--mint),var(--lemon) 60%,var(--hot));}
+.age-ticks{display:flex;justify-content:space-between;font:500 13px/1 var(--mono);color:var(--muted);margin-top:10px}
+.pin{position:absolute;top:0;transform:translateX(-50%);display:grid;justify-items:center;gap:4px;font:700 13px/1.1 var(--mono);text-align:center}
+.pin b{background:var(--ink);color:var(--paper);padding:6px 9px;border-radius:8px;white-space:nowrap}
+.pin::after{content:"";width:3px;height:14px;background:var(--ink)}
+.brain-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.brain-grid div{display:grid;gap:6px;padding-top:14px;border-top:3px solid var(--ink)}
+@media (max-width:760px){.brain-grid{grid-template-columns:1fr}}
+
+/* таймлайн */
+.switch{display:inline-flex;flex-wrap:wrap;gap:6px;padding:6px;border:3px solid var(--ink);border-radius:999px;background:var(--card)}
+.switch button{font:700 15px/1 var(--body);padding:12px 18px;border:0;border-radius:999px;background:transparent;color:var(--ink);cursor:pointer}
+.switch button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.controls{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:28px}
+.tl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.tl-card{padding:24px;display:grid;gap:12px;align-content:start;min-width:0}
+.tl-card h3{display:flex;align-items:center;gap:10px}
+.tl-card h3 svg{flex:none}
+.tl-card ul{margin:0;padding-left:20px;display:grid;gap:8px}
+.money{font:900 clamp(30px,4vw,40px)/1 var(--display);font-variant-numeric:tabular-nums}
+.tl-note{margin-top:18px;font-size:14px;color:var(--muted);max-width:75ch}
+.calc{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:14px;color:var(--muted)}
+.calc input{width:110px;font:700 16px/1 var(--mono);padding:9px 10px;border:2px solid var(--ink);border-radius:10px;background:var(--paper);color:var(--ink)}
+@media (max-width:900px){.tl-grid{grid-template-columns:1fr}}
+
+/* внешность */
+.look{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.look .sticker{padding:24px;display:grid;gap:10px;align-content:start}
+.look .sticker:nth-child(2){background:var(--mint);color:var(--on-bright)}
+.look .sticker:nth-child(4){background:var(--lemon);color:var(--on-bright)}
+.look svg{width:56px;height:56px}
+@media (max-width:900px){.look{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:540px){.look{grid-template-columns:1fr}}
+
+/* мемы */
+.memes{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.meme{overflow:hidden;display:grid;grid-template-rows:auto 1fr}
+.meme-top{padding:18px 20px;font:700 17px/1.35 var(--body);border-bottom:3px solid var(--ink)}
+.meme-top .who{font:500 13px/1.4 var(--mono);color:var(--muted);display:block}
+.meme-pic{min-height:170px;display:grid;place-items:center;padding:22px;text-align:center;font:900 clamp(20px,2.4vw,26px)/1.15 var(--display);text-transform:uppercase}
+.meme:nth-child(6n+1) .meme-pic{background:var(--hot);color:var(--on-bright)}
+.meme:nth-child(6n+2) .meme-pic{background:var(--cobalt);color:var(--on-cobalt)}
+.meme:nth-child(6n+3) .meme-pic{background:var(--lemon);color:var(--on-bright)}
+.meme:nth-child(6n+4) .meme-pic{background:var(--mint);color:var(--on-bright)}
+.meme:nth-child(6n+5) .meme-pic{background:var(--ink);color:var(--paper)}
+.meme:nth-child(6n+6) .meme-pic{background:var(--hot);color:var(--on-bright)}
+.meme-pic small{display:block;font:500 13px/1.4 var(--mono);text-transform:none;margin-top:10px}
+.split{display:grid;grid-template-columns:1fr 1fr;padding:0;min-height:170px}
+.split > div{display:grid;place-items:center;padding:18px;text-align:center}
+.split > div + div{border-left:3px solid var(--ink)}
+.split .lbl{font:700 11px/1 var(--mono);letter-spacing:.1em;opacity:.75;display:block;margin-bottom:8px}
+.meme:nth-child(n) .split > div:first-child{background:var(--mint);color:var(--on-bright)}
+.meme:nth-child(n) .split > div:last-child{background:var(--card);color:var(--ink)}
+@media (max-width:900px){.memes{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.memes{grid-template-columns:1fr}}
+
+/* мифы */
+.myths{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.myth{padding:0;overflow:hidden;display:grid}
+.myth > div{padding:20px 24px;display:grid;gap:6px}
+.myth .m{border-bottom:3px dashed var(--ink)}
+.myth .m p{font:700 19px/1.3 var(--display);text-decoration:line-through;text-decoration-color:var(--hot);text-decoration-thickness:3px}
+.myth .f{background:var(--paper)}
+@media (max-width:760px){.myths{grid-template-columns:1fr}}
+
+/* бросить */
+.quit{background:var(--cobalt);color:var(--on-cobalt);border-block:3px solid var(--ink)}
+.quit .eyebrow{color:var(--lemon)}
+.quit .lead{color:var(--on-cobalt);opacity:.85}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:3px solid var(--ink);border-radius:var(--r);overflow:hidden;background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+.steps li{list-style:none;padding:22px;display:grid;gap:8px;align-content:start;border-right:3px solid var(--ink);border-bottom:3px solid var(--ink);margin-right:-3px;margin-bottom:-3px}
+.steps b{font:900 22px/1 var(--display);color:var(--hot)}
+.steps{padding:0;margin:0}
+@media (max-width:900px){.steps{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:480px){.steps{grid-template-columns:1fr}}
+
+/* помощь */
+.help{display:grid;grid-template-columns:1fr 1.15fr;gap:28px;align-items:start}
+.services{display:grid;gap:16px}
+.service{padding:20px 22px;display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start}
+.service svg{width:44px;height:44px}
+.service div{display:grid;gap:4px;min-width:0}
+.hotline{padding:22px;display:grid;gap:14px;background:var(--lemon);color:var(--on-bright)}
+.hotline .row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.hotline .num{font:700 20px/1 var(--mono);user-select:all}
+.hotline small{display:block;font-size:13px;opacity:.75}
+.copy{font:700 13px/1 var(--body);padding:8px 12px;border:2px solid var(--on-bright);border-radius:999px;background:transparent;color:var(--on-bright);cursor:pointer}
+form.sticker{padding:28px;display:grid;gap:16px}
+.field{display:grid;gap:6px}
+.field label,.legend{font-weight:700;font-size:15px}
+.field input,.field select,.field textarea{font:500 16px/1.4 var(--body);padding:13px 14px;border:3px solid var(--ink);border-radius:12px;background:var(--paper);color:var(--ink);width:100%}
+.field textarea{min-height:90px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.radios{display:flex;flex-wrap:wrap;gap:10px}
+.radios label{display:flex;align-items:center;gap:8px;padding:10px 14px;border:2px solid var(--ink);border-radius:999px;cursor:pointer;font-weight:600;font-size:15px}
+.radios input{accent-color:var(--hot);width:18px;height:18px;margin:0}
+.radios label:has(input:checked){background:var(--ink);color:var(--paper)}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--muted)}
+.check input{width:20px;height:20px;accent-color:var(--hot);margin-top:2px;flex:none}
+.status{font-weight:700;padding:14px 16px;border-radius:12px;border:3px solid var(--ink)}
+.status.ok{background:var(--mint);color:var(--on-bright)}
+.status.err{background:var(--lemon);color:var(--on-bright)}
+@media (max-width:900px){.help{grid-template-columns:1fr}}
+@media (max-width:480px){.two{grid-template-columns:1fr}}
+
+/* подвал */
+footer{border-top:3px solid var(--ink);padding-block:48px;font-size:14px;color:var(--muted)}
+footer .wrap{display:grid;gap:20px}
+.sources{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 32px;margin:0;padding-left:20px}
+.sources a{text-underline-offset:3px}
+@media (max-width:700px){.sources{grid-template-columns:1fr}}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#top"><i></i>Выдыхай</a>
+    <nav class="nav" aria-label="Разделы">
+      <a href="#inside">Что внутри</a>
+      <a href="#timeline">1 / 5 / 10 лет</a>
+      <a href="#look">Внешность</a>
+      <a href="#myths">Мифы</a>
+      <a href="#help">Помощь</a>
+    </nav>
+    <a class="btn btn-hot" href="#help">Записаться</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-copy">
+        <span class="eyebrow">Без нотаций. Только факты</span>
+        <h1>Вейп — это <span class="strike">облачко</span> <span class="mark">никотин</span></h1>
+        <p class="lead">Сигареты, одноразки, поды, «электронки». Здесь коротко и по делу о том, что они делают с телом, мозгом и внешностью. А если захочешь поговорить с врачом или психологом, это бесплатно и без осуждения.</p>
+        <div class="cta-row">
+          <a class="btn btn-hot" href="#help">Получить консультацию</a>
+          <a class="btn" href="#timeline">Что будет через 10 лет</a>
+        </div>
+        <div class="chip-row" aria-label="Темы">
+          <span class="chip">сигареты</span><span class="chip">одноразки</span><span class="chip">поды и жижи</span><span class="chip">снюс и пэки</span><span class="chip">кальян</span>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <svg viewBox="0 0 420 440" role="img">
+          <circle cx="215" cy="220" r="190" fill="var(--lemon)" stroke="var(--ink)" stroke-width="4"/>
+          <g transform="rotate(-14 210 230)">
+            <rect x="160" y="70" width="110" height="300" rx="40" fill="var(--hot)" stroke="var(--ink)" stroke-width="5"/>
+            <rect x="185" y="40" width="60" height="50" rx="16" fill="var(--card)" stroke="var(--ink)" stroke-width="5"/>
+            <rect x="180" y="150" width="70" height="110" rx="14" fill="var(--card)" stroke="var(--ink)" stroke-width="4"/>
+            <text x="215" y="196" text-anchor="middle" font-family="Unbounded, Arial Black, sans-serif" font-weight="900" font-size="22" fill="var(--ink)">5%</text>
+            <text x="215" y="222" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="var(--ink)">nicotine</text>
+            <text x="215" y="240" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="var(--ink)">mango ice</text>
+            <circle cx="215" cy="320" r="10" fill="var(--ink)"/>
+          </g>
+          <g font-family="Unbounded, Arial Black, sans-serif">
+            <rect x="12" y="300" width="182" height="96" rx="16" fill="var(--card)" stroke="var(--ink)" stroke-width="4" transform="rotate(-6 100 348)"/>
+            <text x="100" y="340" text-anchor="middle" font-weight="900" font-size="20" fill="var(--ink)" transform="rotate(-6 100 348)">1 под ≈</text>
+            <text x="100" y="370" text-anchor="middle" font-weight="700" font-size="15" fill="var(--hot)" transform="rotate(-6 100 348)">пачка сигарет</text>
+            <circle cx="345" cy="88" r="46" fill="var(--cobalt)" stroke="var(--ink)" stroke-width="4"/>
+            <text x="345" y="84" text-anchor="middle" font-weight="900" font-size="18" fill="#FFFFFF">18+</text>
+            <text x="345" y="104" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#FFFFFF">по закону</text>
+          </g>
+          <g fill="var(--card)" stroke="var(--ink)" stroke-width="4">
+            <circle cx="96" cy="96" r="26"/><circle cx="130" cy="64" r="18"/><circle cx="72" cy="140" r="14"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track">
+      <span>мозг взрослеет до 25 лет</span><span>одна сигарета ≈ минус 20 минут жизни</span><span>«пар» — это аэрозоль с частицами</span><span>никотин вызывает зависимость за недели</span><span>бросить можно в любом возрасте</span>
+      <span>мозг взрослеет до 25 лет</span><span>одна сигарета ≈ минус 20 минут жизни</span><span>«пар» — это аэрозоль с частицами</span><span>никотин вызывает зависимость за недели</span><span>бросить можно в любом возрасте</span>
+    </div>
+  </div>
+
+  <section>
+    <div class="wrap">
+      <div class="head">
+        <span class="eyebrow">В цифрах</span>
+        <h2>Четыре числа, которые стоит знать</h2>
+      </div>
+      <div class="stats">
+        <div class="stat sticker"><b>25</b><p>лет: до этого возраста мозг ещё достраивается, и никотин мешает ему</p><small>US Surgeon General, 2016</small></div>
+        <div class="stat sticker"><b>20 мин</b><p>жизни в среднем отнимает каждая выкуренная сигарета</p><small>UCL, Journal of Addiction, 2024</small></div>
+        <div class="stat sticker"><b>~7000</b><p>химических веществ в табачном дыме, около 70 из них вызывают рак</p><small>CDC / National Cancer Institute</small></div>
+        <div class="stat sticker"><b>×3</b><p>подростки, которые вейпят, примерно втрое чаще начинают курить и обычные сигареты</p><small>NASEM, 2018</small></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="inside" style="padding-top:0">
+    <div class="wrap">
+      <div class="head">
+        <span class="eyebrow">Что внутри</span>
+        <h2>«Это же просто пар со вкусом»</h2>
+        <p class="lead">Нет. Пар — это вода. Из вейпа выходит аэрозоль: мельчайшие капли и частицы, которые оседают глубоко в лёгких.</p>
+      </div>
+      <div class="inside">
+        <div class="sticker">
+          <span class="tag">Вейп / одноразка / под</span>
+          <div class="bars">
+            <div class="bar"><div class="bar-top"><span>Никотин</span><span>до 20 мг/мл, в нелегальных до 50+</span></div><div class="bar-line"><i style="width:92%"></i></div></div>
+            <div class="bar"><div class="bar-top"><span>Пропиленгликоль и глицерин</span><span>раздражают дыхательные пути</span></div><div class="bar-line"><i style="width:78%"></i></div></div>
+            <div class="bar"><div class="bar-top"><span>Ароматизаторы</span><span>часть токсична при вдыхании</span></div><div class="bar-line"><i style="width:60%"></i></div></div>
+            <div class="bar"><div class="bar-top"><span>Металлы из спирали</span><span>никель, хром, свинец</span></div><div class="bar-line"><i style="width:38%"></i></div></div>
+            <div class="bar"><div class="bar-top"><span>Ультрамелкие частицы</span><span>проникают в кровь</span></div><div class="bar-line"><i style="width:50%"></i></div></div>
+          </div>
+          <p style="font-size:14px;color:var(--muted)">Полоски показывают, насколько хорошо доказан вред, а не долю в составе. Источники: CDC, Surgeon General 2016, European Respiratory Society.</p>
+        </div>
+        <div class="sticker">
+          <span class="tag">Сигарета</span>
+          <div class="bars">
+            <div class="bar"><div class="bar-top"><span>Никотин</span><span>главная причина зависимости</span></div><div class="bar-line"><i style="width:92%"></i></div></div>
+            <div class="bar"><div class="bar-top"><span>Смолы</span><span>оседают в лёгких, вызывают рак</span></div><div class="bar-line"><i style="width:96%"></i></div></div>
+            <div class="bar"><div class="bar-top"><span>Угарный газ</span><span>вытесняет кислород из крови</span></div><div class="bar-line"><i style="width:84%"></i></div></div>
+            <div class="bar"><div class="bar-top"><span>Формальдегид, бензол</span><span>доказанные канцерогены</span></div><div class="bar-line"><i style="width:88%"></i></div></div>
+            <div class="bar"><div class="bar-top"><span>Аммиак, мышьяк, кадмий</span><span>и ещё тысячи веществ</span></div><div class="bar-line"><i style="width:80%"></i></div></div>
+          </div>
+          <p style="font-size:14px;color:var(--muted)">Курение остаётся главной предотвратимой причиной смерти в мире: около 7 млн человек в год (ВОЗ).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap">
+      <div class="head">
+        <span class="eyebrow">Мозг</span>
+        <h2>Мозг в ремонте до 25 лет. Никотин мешает стройке</h2>
+      </div>
+      <div class="brain sticker">
+        <div class="age-scale">
+          <div class="pin" style="left:60%"><b>15 лет</b></div>
+          <div class="pin" style="left:68%"><b>17 лет</b></div>
+          <div class="age-line"></div>
+          <div class="age-ticks"><span>0</span><span>5</span><span>10</span><span>15</span><span>20</span><span>25</span></div>
+        </div>
+        <div class="brain-grid">
+          <div><h3>Внимание и учёба</h3><p>Никотин влияет на зоны, которые отвечают за концентрацию и память. Учиться становится труднее.</p></div>
+          <div><h3>Настроение</h3><p>Между затяжками растут тревога и раздражительность. Это не стресс, а начало ломки.</p></div>
+          <div><h3>Зависимость</h3><p>Подростковый мозг привыкает быстрее взрослого. Первые признаки зависимости появляются уже через несколько недель.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="timeline" style="padding-top:0">
+    <div class="wrap">
+      <div class="head">
+        <span class="eyebrow">Машина времени</span>
+        <h2>Что будет через 1, 5 и 10 лет</h2>
+        <p class="lead">Выбери, что куришь, и срок. Это не приговор, а самые частые последствия по данным исследований.</p>
+      </div>
+      <div class="controls">
+        <div class="switch" role="group" aria-label="Что куришь">
+          <button type="button" data-product="vape" aria-pressed="true">Вейп</button>
+          <button type="button" data-product="cig" aria-pressed="false">Сигареты</button>
+        </div>
+        <div class="switch" role="group" aria-label="Срок">
+          <button type="button" data-years="1" aria-pressed="true">1 год</button>
+          <button type="button" data-years="5" aria-pressed="false">5 лет</button>
+          <button type="button" data-years="10" aria-pressed="false">10 лет</button>
+        </div>
+      </div>
+      <div class="tl-grid">
+        <div class="tl-card sticker">
+          <h3><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><path d="M14 24s-9-5.5-9-12a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 6.5-9 12-9 12z" fill="var(--hot)" stroke="var(--ink)" stroke-width="2.5"/></svg>Здоровье</h3>
+          <ul id="tl-health"></ul>
+        </div>
+        <div class="tl-card sticker">
+          <h3><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="11" fill="var(--mint)" stroke="var(--ink)" stroke-width="2.5"/><circle cx="10" cy="12" r="1.8" fill="var(--ink)"/><circle cx="18" cy="12" r="1.8" fill="var(--ink)"/><path d="M9 18q5 3 10 0" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round"/></svg>Внешность</h3>
+          <ul id="tl-look"></ul>
+        </div>
+        <div class="tl-card sticker">
+          <h3><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="3" y="7" width="22" height="15" rx="4" fill="var(--lemon)" stroke="var(--ink)" stroke-width="2.5"/><circle cx="19" cy="14.5" r="2.4" fill="var(--ink)"/></svg>Кошелёк</h3>
+          <div class="money" id="tl-money">15 600 лей</div>
+          <p id="tl-money-hint">Хватит на новый смартфон.</p>
+          <div class="calc">
+            <label for="spend">Трачу в неделю, лей</label>
+            <input id="spend" type="number" min="0" step="10" value="300" inputmode="numeric">
+          </div>
+        </div>
+      </div>
+      <p class="tl-note" id="tl-note"></p>
+    </div>
+  </section>
+
+  <section id="look" style="padding-top:0">
+    <div class="wrap">
+      <div class="head">
+        <span class="eyebrow">Внешность</span>
+        <h2>Фильтр «минус 5 лет» работает наоборот</h2>
+        <p class="lead">Никотин сужает сосуды, и коже, волосам и дёснам достаётся меньше кислорода. Это видно в зеркале раньше, чем на рентгене.</p>
+      </div>
+      <div class="look">
+        <div class="sticker">
+          <svg viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="var(--lemon)" stroke="var(--ink)" stroke-width="3"/><path d="M16 22q4-3 8 0M32 22q4-3 8 0M18 38q10 6 20 0M14 30l4 1M42 30l-4 1" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/></svg>
+          <h3>Кожа</h3><p>Разрушается коллаген, кожа становится тусклой и серой. Морщины у губ и глаз появляются раньше. В исследованиях близнецов курящий выглядит старше некурящего брата или сестры.</p>
+        </div>
+        <div class="sticker">
+          <svg viewBox="0 0 56 56" aria-hidden="true"><path d="M12 18q16-10 32 0v8q-2 18-8 18-3 0-4-8t-4-8-4 8-4 8q-6 0-8-18z" fill="var(--card)" stroke="var(--ink)" stroke-width="3" stroke-linejoin="round"/></svg>
+          <h3>Зубы и дёсны</h3><p>Жёлтый налёт, кровоточивость дёсен, кариес. Сладкие жижи и сухость во рту от вейпа помогают бактериям.</p>
+        </div>
+        <div class="sticker">
+          <svg viewBox="0 0 56 56" aria-hidden="true"><path d="M10 40q4-26 18-28t18 28" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/><path d="M18 40q2-16 10-18M28 22q8 2 10 18" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/></svg>
+          <h3>Волосы</h3><p>Хуже кровоснабжение у корней: волосы тусклые и ломкие. У курящих мужчин раньше начинается облысение.</p>
+        </div>
+        <div class="sticker">
+          <svg viewBox="0 0 56 56" aria-hidden="true"><path d="M8 30q6-10 12 0t12 0 12 0" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/><path d="M14 40q6-8 12 0t12 0" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/></svg>
+          <h3>Запах</h3><p>Изо рта, от волос и одежды. Сам курящий его почти не чувствует, потому что притупляются обоняние и вкус.</p>
+        </div>
+        <div class="sticker">
+          <svg viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="22" fill="none" stroke="var(--ink)" stroke-width="3"/><path d="M28 14v14l9 6" fill="none" stroke="var(--hot)" stroke-width="4" stroke-linecap="round"/></svg>
+          <h3>Спорт</h3><p>Угарный газ и никотин снижают выносливость. Одышка на физре и в зале появляется раньше, восстановление идёт медленнее.</p>
+        </div>
+        <div class="sticker">
+          <svg viewBox="0 0 56 56" aria-hidden="true"><path d="M14 12h28v32H14z" fill="var(--card)" stroke="var(--ink)" stroke-width="3" stroke-linejoin="round"/><path d="M20 22h16M20 30h16M20 38h8" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/></svg>
+          <h3>Акне и раны</h3><p>Порезы, проколы и прыщи заживают дольше: тканям не хватает кислорода. Врачи из-за этого просят бросить курить перед операциями.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap">
+      <div class="head">
+        <span class="eyebrow">Мемы</span>
+        <h2>Смешно, пока не про тебя</h2>
+      </div>
+      <div class="memes">
+        <article class="meme sticker">
+          <div class="meme-top"><span class="who">никто:</span><span class="who">абсолютно никто:</span>вейп в 2 часа ночи:</div>
+          <div class="meme-pic">«может, ещё одну затяжечку?»</div>
+        </article>
+        <article class="meme sticker">
+          <div class="meme-top">Мозг в 15 лет: идёт стройка, сдача в 25.<br>Никотин:</div>
+          <div class="meme-pic">«я тут немного перепланирую»</div>
+        </article>
+        <article class="meme sticker">
+          <div class="meme-top">«Я могу бросить в любой момент»</div>
+          <div class="meme-pic">попытка №4<small>с вероятностью 9 из 10 говорит тот, у кого уже зависимость</small></div>
+        </article>
+        <article class="meme sticker">
+          <div class="meme-top">Как я себя вижу с вейпом / как это видят остальные</div>
+          <div class="meme-pic split">
+            <div><span><span class="lbl">ОЖИДАНИЕ</span>главный герой клипа</span></div>
+            <div><span><span class="lbl">РЕАЛЬНОСТЬ</span>кашляю после 200 метров</span></div>
+          </div>
+        </article>
+        <article class="meme sticker">
+          <div class="meme-top">Одноразка «на 10 000 тяг»</div>
+          <div class="meme-pic">это не «на месяц»<small>это 10 000 доз никотина</small></div>
+        </article>
+        <article class="meme sticker">
+          <div class="meme-top">Вкус: «клубника со сливками»<br>Лёгкие:</div>
+          <div class="meme-pic">а можно просто воздух?</div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="myths" style="padding-top:0">
+    <div class="wrap">
+      <div class="head">
+        <span class="eyebrow">Мифы и факты</span>
+        <h2>Что говорят в курилке и что говорит наука</h2>
+      </div>
+      <div class="myths">
+        <div class="myth sticker"><div class="m"><span class="tag">миф</span><p>Вейп безвреднее, значит, можно</p></div><div class="f"><span class="tag">факт</span><p>Для взрослого курильщика, который бросает сигареты, это может быть меньшим злом. Для подростка, который не курил, это новая зависимость с нуля.</p></div></div>
+        <div class="myth sticker"><div class="m"><span class="tag">миф</span><p>Вейп помогает от стресса</p></div><div class="f"><span class="tag">факт</span><p>Он снимает только ломку, которую сам и вызвал. По обзору Cochrane 2021 года, после отказа от никотина тревога и депрессия снижаются.</p></div></div>
+        <div class="myth sticker"><div class="m"><span class="tag">миф</span><p>Без никотина вообще не вредно</p></div><div class="f"><span class="tag">факт</span><p>Аэрозоль с ароматизаторами и частицами металлов всё равно раздражает лёгкие. И проверить, что в жиже правда нет никотина, нельзя.</p></div></div>
+        <div class="myth sticker"><div class="m"><span class="tag">миф</span><p>Одна сигарета на тусовке — это ничего</p></div><div class="f"><span class="tag">факт</span><p>Безопасной дозы нет. Даже 1–4 сигареты в день заметно повышают риск болезней сердца (данные ВОЗ и крупных когортных исследований).</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="quit">
+    <div class="wrap">
+      <div class="head">
+        <span class="eyebrow">Хорошие новости</span>
+        <h2>Тело начинает восстанавливаться уже через 20 минут</h2>
+        <p class="lead">Что происходит после последней сигареты, по данным ВОЗ. Чем раньше бросить, тем полнее восстановление.</p>
+      </div>
+      <ol class="steps">
+        <li><b>20 минут</b><p>Пульс и давление возвращаются к норме.</p></li>
+        <li><b>12 часов</b><p>Угарный газ в крови снижается до нормы.</p></li>
+        <li><b>2–12 недель</b><p>Улучшаются кровообращение и работа лёгких.</p></li>
+        <li><b>1–9 месяцев</b><p>Меньше кашля и одышки.</p></li>
+        <li><b>1 год</b><p>Риск болезней сердца снижается вдвое.</p></li>
+        <li><b>5–15 лет</b><p>Риск инсульта как у некурящего.</p></li>
+        <li><b>10 лет</b><p>Риск рака лёгких снижается примерно вдвое.</p></li>
+        <li><b>15 лет</b><p>Риск болезней сердца как у некурящего.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="help">
+    <div class="wrap">
+      <div class="head">
+        <span class="eyebrow">Помощь</span>
+        <h2>Поговори со специалистом. Бесплатно и без осуждения</h2>
+        <p class="lead">Оставь заявку или позвони, и мы свяжемся с тобой в течение суток. Можно написать за себя, за друга или как родитель.</p>
+      </div>
+      <div class="help">
+        <div class="services">
+          <div class="service sticker">
+            <svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="4" width="36" height="36" rx="12" fill="var(--hot)" stroke="var(--ink)" stroke-width="3"/><path d="M22 13v18M13 22h18" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/></svg>
+            <div><h3>Врач</h3><p>Как бросить без мучений, что с лёгкими и сердцем, нужны ли анализы.</p></div>
+          </div>
+          <div class="service sticker">
+            <svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="4" width="36" height="36" rx="12" fill="var(--mint)" stroke="var(--ink)" stroke-width="3"/><path d="M13 17h18v10H21l-6 5v-5h-2z" fill="var(--card)" stroke="var(--ink)" stroke-width="3" stroke-linejoin="round"/></svg>
+            <div><h3>Психолог</h3><p>Про тягу, стресс, компанию и давление сверстников. Анонимно, родителям не сообщаем без твоего согласия.</p></div>
+          </div>
+          <div class="service sticker">
+            <svg viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="4" width="36" height="36" rx="12" fill="var(--cobalt)" stroke="var(--ink)" stroke-width="3"/><circle cx="16" cy="19" r="4" fill="var(--card)" stroke="var(--ink)" stroke-width="2.5"/><circle cx="28" cy="19" r="4" fill="var(--card)" stroke="var(--ink)" stroke-width="2.5"/><path d="M10 32q6-7 12 0 6-7 12 0" fill="none" stroke="var(--ink)" stroke-width="2.5"/></svg>
+            <div><h3>Семинар</h3><p>Встреча в школе или онлайн: разбираем мифы, задаём любые вопросы.</p></div>
+          </div>
+          <div class="hotline sticker">
+            <div class="row"><div><a class="num" href="tel:+37379537088">+373 79 537 088</a><small>Наш телефон: запись к врачу, психологу или на семинар</small></div><button class="copy" type="button" data-copy="+37379537088">Скопировать</button></div>
+            <div class="row"><div><a class="num" href="tel:080010001">0 800 10001</a><small>Зелёная линия Минздрава Молдовы: помощь в отказе от курения, бесплатно</small></div><button class="copy" type="button" data-copy="080010001">Скопировать</button></div>
+            <div class="row"><div><a class="num" href="tel:116111">116 111</a><small>Telefonul Copilului: психологическая помощь детям и подросткам, круглосуточно, бесплатно и анонимно. Есть чат на <a href="https://telefonulcopilului.md" target="_blank" rel="noopener">telefonulcopilului.md</a></small></div><button class="copy" type="button" data-copy="116111">Скопировать</button></div>
+            <div class="row"><div><a class="num" href="tel:112">112</a><small>Если плохо прямо сейчас: экстренная служба</small></div><button class="copy" type="button" data-copy="112">Скопировать</button></div>
+          </div>
+        </div>
+
+        <form class="sticker" id="lead-form" novalidate>
+          <h3>Заявка</h3>
+          <div class="two">
+            <div class="field"><label for="f-name">Как к тебе обращаться</label><input id="f-name" name="name" autocomplete="given-name" placeholder="Например, Саша" required></div>
+            <div class="field"><label for="f-age">Возраст</label><input id="f-age" name="age" type="number" min="10" max="99" inputmode="numeric" placeholder="15"></div>
+          </div>
+          <div class="field"><label for="f-contact">Телефон</label><input id="f-contact" name="phone" type="tel" autocomplete="tel" placeholder="+373 …" required></div>
+          <div class="hp" aria-hidden="true"><label for="f-website">Не заполняйте</label><input id="f-website" name="website" tabindex="-1" autocomplete="off"></div>
+          <div class="field">
+            <span class="legend" id="f-type-l">Что нужно</span>
+            <div class="radios" role="radiogroup" aria-labelledby="f-type-l">
+              <label><input type="radio" id="f-type-doc" name="type" value="Врач" checked>Врач</label>
+              <label><input type="radio" id="f-type-psy" name="type" value="Психолог">Психолог</label>
+              <label><input type="radio" id="f-type-sem" name="type" value="Семинар">Семинар</label>
+              <label><input type="radio" id="f-type-call" name="type" value="Перезвонить">Просто перезвонить</label>
+            </div>
+          </div>
+          <div class="field"><label for="f-msg">Пара слов о ситуации (если хочешь)</label><textarea id="f-msg" name="msg" placeholder="Вейплю полгода, хочу бросить, но срываюсь"></textarea></div>
+          <label class="check" for="f-ok"><input type="checkbox" id="f-ok" name="ok">Я согласен(на) на обработку контактов только для связи со мной. Если мне меньше 14 лет, заявку оставляет родитель.</label>
+          <button class="btn btn-hot" type="submit" id="f-submit">Отправить заявку</button>
+          <div class="status" id="f-status" role="status" hidden></div>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><b style="color:var(--ink)">Выдыхай</b>: информационный проект. Он не заменяет консультацию врача. Продажа табачных и никотинсодержащих изделий лицам до 18 лет в Молдове запрещена.</p>
+    <p>Источники:</p>
+    <ol class="sources">
+      <li><a href="https://www.ncbi.nlm.nih.gov/books/NBK538680/" target="_blank" rel="noopener">US Surgeon General: E-Cigarette Use Among Youth, 2016</a></li>
+      <li><a href="https://www.cdc.gov/tobacco/e-cigarettes/youth.html" target="_blank" rel="noopener">CDC: E-Cigarettes and Youth</a></li>
+      <li><a href="https://nap.nationalacademies.org/catalog/24952" target="_blank" rel="noopener">NASEM: Public Health Consequences of E-Cigarettes, 2018</a></li>
+      <li><a href="https://www.ucl.ac.uk/news/2024/dec/each-cigarette-smoked-takes-20-minutes-life" target="_blank" rel="noopener">UCL: Each cigarette takes 20 minutes of life, 2024</a></li>
+      <li><a href="https://www.who.int/news-room/fact-sheets/detail/tobacco" target="_blank" rel="noopener">ВОЗ: Табак, информационный бюллетень</a></li>
+      <li><a href="https://www.who.int/news-room/questions-and-answers/item/tobacco-health-benefits-of-smoking-cessation" target="_blank" rel="noopener">ВОЗ: Польза отказа от курения</a></li>
+      <li><a href="https://erj.ersjournals.com/content/53/2/1801151" target="_blank" rel="noopener">European Respiratory Society: позиция по электронным сигаретам, 2019</a></li>
+      <li><a href="https://www.cochranelibrary.com/cdsr/doi/10.1002/14651858.CD013522.pub2/full" target="_blank" rel="noopener">Cochrane: отказ от курения и психическое здоровье, 2021</a></li>
+    </ol>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var DATA = {
+    vape: {
+      1: {
+        health: ["Никотиновая зависимость. Один под по никотину может равняться пачке сигарет", "Кашель, першение, сухость во рту", "Тревожность и раздражительность, если долго не затянуться", "Хуже сон и концентрация"],
+        look: ["Кровоточат дёсны, появляется налёт", "Кожа суше и тусклее", "Запах сладкой жижи въедается в одежду"],
+        note: "Хватает и года: зависимость формируется, а бросать с каждым месяцем сложнее."
+      },
+      5: {
+        health: ["Выше риск бронхита и приступов, похожих на астму", "Сосуды хуже расширяются, сердце работает с перегрузкой", "Многие к этому времени переходят на сигареты или курят и то, и другое"],
+        look: ["Кариес и воспаление дёсен", "Медленнее заживают прыщи и ранки", "Минус к выносливости в спорте"],
+        note: "Подростки, которые вейпят, примерно втрое чаще начинают курить сигареты (NASEM, 2018)."
+      },
+      10: {
+        health: ["Честно: таких долгих наблюдений пока мало, массово вейпы появились около 2010 года", "Учёные уже видят изменения в лёгких и сосудах и ждут роста хронических болезней", "Никотин 10 лет подряд — это стабильно повышенные пульс и давление"],
+        look: ["Раннее старение кожи от постоянного сужения сосудов", "Проблемы с зубами, которые дорого лечить"],
+        note: "То, что долгих данных мало, не значит «безопасно». Это значит, что эксперимент ставят на тебе."
+      }
+    },
+    cig: {
+      1: {
+        health: ["Зависимость сформирована, бросить уже трудно", "Утренний кашель и одышка на физре", "Чаще простуды и бронхиты"],
+        look: ["Желтеют пальцы и зубы", "Запах от волос, одежды и изо рта", "Кожа сереет, чаще прыщи"],
+        note: "Одна сигарета в среднем отнимает около 20 минут жизни (UCL, 2024). Пачка в день — почти 7 часов в день."
+      },
+      5: {
+        health: ["Хронический «кашель курильщика»", "Лёгкие хуже очищаются, бронхиты затягиваются", "Ниже выносливость, выше пульс в покое"],
+        look: ["Мелкие морщины вокруг губ и глаз", "Тусклая кожа, тёмные круги", "Пародонтоз, налёт и запах изо рта"],
+        note: "Почти все взрослые курильщики начали до 18 лет. Именно поэтому табачные компании так любят подростков."
+      },
+      10: {
+        health: ["Лёгкие работают хуже, чем положено по возрасту", "Растёт риск ХОБЛ, болезней сердца и рака", "Проблемы с потенцией и рождением детей"],
+        look: ["Выглядишь старше ровесников: так показывают исследования близнецов", "Ломкие волосы, у мужчин раньше лысина"],
+        note: "Курильщики в среднем теряют не меньше 10 лет жизни. Если бросить до 40 лет, большую часть этого риска можно вернуть."
+      }
+    }
+  };
+  var HINTS = [
+    [5000, "Хватит на хорошие беспроводные наушники."],
+    [15000, "Хватит на новые кроссовки и наушники."],
+    [20000, "Хватит на новый смартфон."],
+    [50000, "Хватит на ноутбук и поездку на море."],
+    [100000, "Хватит на путешествие по Европе с друзьями."],
+    [Infinity, "Это первый взнос за машину."]
+  ];
+  var state = {product:"vape", years:1};
+  var $ = function(id){return document.getElementById(id)};
+
+  function fill(ul, items){
+    ul.textContent = "";
+    items.forEach(function(t){var li=document.createElement("li"); li.textContent=t; ul.appendChild(li);});
+  }
+  function render(){
+    var d = DATA[state.product][state.years];
+    fill($("tl-health"), d.health);
+    fill($("tl-look"), d.look);
+    $("tl-note").textContent = d.note;
+    var weekly = Math.max(0, Number($("spend").value) || 0);
+    var total = Math.round(weekly * 52 * state.years);
+    $("tl-money").textContent = total.toLocaleString("ru-RU") + " лей";
+    var hint = HINTS.find(function(h){return total < h[0]});
+    $("tl-money-hint").textContent = total === 0 ? "Ноль лей, и это лучший вариант." : "За " + (state.years === 1 ? "год" : state.years + " лет") + ". " + hint[1];
+    document.querySelectorAll("[data-product]").forEach(function(b){b.setAttribute("aria-pressed", String(b.dataset.product === state.product))});
+    document.querySelectorAll("[data-years]").forEach(function(b){b.setAttribute("aria-pressed", String(Number(b.dataset.years) === state.years))});
+  }
+  document.querySelectorAll("[data-product]").forEach(function(b){b.addEventListener("click", function(){state.product=b.dataset.product; render();})});
+  document.querySelectorAll("[data-years]").forEach(function(b){b.addEventListener("click", function(){state.years=Number(b.dataset.years); render();})});
+  $("spend").addEventListener("input", render);
+  render();
+
+  document.querySelectorAll(".copy").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var text = btn.dataset.copy;
+      var done = function(){var o=btn.textContent; btn.textContent="Скопировано"; setTimeout(function(){btn.textContent=o},1500)};
+      var fallback = function(){var r=document.createRange(); r.selectNodeContents(btn.parentElement.querySelector(".num")); var s=getSelection(); s.removeAllRanges(); s.addRange(r);};
+      try { navigator.clipboard.writeText(text).then(done, fallback); } catch(e){ fallback(); }
+    });
+  });
+
+  // Заявка уходит в /api/lead: сервер сохраняет её в Supabase и шлёт уведомление в Telegram
+  var form = $("lead-form"), status = $("f-status");
+  function show(kind, text){status.className="status "+kind; status.textContent=text; status.hidden=false;}
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    var name = $("f-name").value.trim(), phone = $("f-contact").value.trim();
+    if(!name && !phone){show("err","Форма пустая. Напиши имя и телефон, чтобы мы могли связаться."); $("f-name").focus(); return;}
+    if(!name){show("err","Напиши, как к тебе обращаться."); $("f-name").focus(); return;}
+    if(phone.replace(/\D/g,"").length < 6){show("err","Проверь номер телефона: в нём должно быть хотя бы 6 цифр."); $("f-contact").focus(); return;}
+    if(!$("f-ok").checked){show("err","Отметь согласие на обработку контактов, без него мы не можем связаться."); return;}
+    var btn = $("f-submit"); btn.disabled = true; btn.textContent = "Отправляем…";
+    var lead = {
+      name:name, phone:phone, age:$("f-age").value || "",
+      topic:(form.querySelector("input[name=type]:checked")||{}).value || "",
+      comment:$("f-msg").value.trim(), website:$("f-website").value
+    };
+    fetch("/api/lead", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(lead)})
+      .then(function(r){ return r.json().catch(function(){return {}}).then(function(d){ if(!r.ok) throw new Error(d.error || "error"); return d; }); })
+      .then(function(){
+        show("ok","Заявка отправлена. Мы свяжемся с тобой в течение суток.");
+        form.reset(); render();
+      })
+      .catch(function(err){
+        var msg = err && err.message && err.message !== "error" && err.message !== "Failed to fetch" ? err.message : "Не получилось отправить заявку. Позвони нам: +373 79 537 088.";
+        show("err", msg);
+      })
+      .then(function(){ btn.disabled = false; btn.textContent = "Отправить заявку"; });
+  });
+})();
+</script>
+</body>
+</html>

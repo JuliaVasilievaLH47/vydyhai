@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Выдыхай · Заявки</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{
+  --paper:#ECEEFB; --card:#FFFFFF; --ink:#141224; --muted:#565472; --line:#C9CBE4;
+  --hot:#FF4D2E; --cobalt:#3346FF; --lemon:#FFE040; --mint:#62D9B4; --on-bright:#141224;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"Manrope","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#121120; --card:#1D1B30; --ink:#EFEEFA; --muted:#A9A6C4; --line:#38355A;
+  --hot:#FF6A4D; --cobalt:#6F7EFF; color-scheme:dark }}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 15px/1.5 var(--body)}
+[hidden]{display:none!important}
+.wrap{max-width:1100px;margin:0 auto;padding:28px max(16px,env(safe-area-inset-left,0px)) 48px max(16px,env(safe-area-inset-right,0px))}
+h1{font:900 26px/1.1 var(--display);margin:0}
+:focus-visible{outline:3px solid var(--cobalt);outline-offset:2px;border-radius:6px}
+.btn{font:700 15px/1 var(--body);padding:12px 18px;border:3px solid var(--ink);border-radius:999px;background:var(--card);color:var(--ink);cursor:pointer;box-shadow:3px 3px 0 var(--ink)}
+.btn-hot{background:var(--hot);color:var(--on-bright)}
+.btn:disabled{opacity:.6;cursor:default}
+
+.login{max-width:380px;margin:12vh auto 0;background:var(--card);border:3px solid var(--ink);border-radius:18px;box-shadow:6px 6px 0 var(--ink);padding:28px;display:grid;gap:16px}
+.login label{font-weight:700}
+.login input{font:500 16px/1.4 var(--body);padding:12px 14px;border:3px solid var(--ink);border-radius:12px;background:var(--paper);color:var(--ink);width:100%}
+.msg{font-weight:700;padding:10px 14px;border-radius:12px;background:var(--lemon);color:var(--on-bright);border:2px solid var(--ink)}
+
+.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px}
+.filters{display:flex;flex-wrap:wrap;gap:8px}
+.filters button{font:700 14px/1 var(--body);padding:10px 14px;border:2px solid var(--ink);border-radius:999px;background:var(--card);color:var(--ink);cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.filters b{font:700 12px/1 var(--mono);margin-left:6px;opacity:.7}
+.tools{display:flex;gap:10px;align-items:center}
+.updated{font:500 12px/1 var(--mono);color:var(--muted)}
+
+.list{display:grid;gap:12px}
+.lead{background:var(--card);border:2px solid var(--ink);border-radius:14px;padding:16px 18px;display:grid;grid-template-columns:150px 1fr 170px;gap:16px;align-items:start}
+.lead[data-status="новая"]{border-left:10px solid var(--hot)}
+.lead[data-status="в работе"]{border-left:10px solid var(--lemon)}
+.lead[data-status="закрыта"]{border-left:10px solid var(--mint);opacity:.8}
+.meta{font:500 12px/1.5 var(--mono);color:var(--muted)}
+.meta b{display:block;font:700 13px/1.4 var(--mono);color:var(--ink)}
+.who{display:grid;gap:4px;min-width:0}
+.who .name{font-weight:800;font-size:16px}
+.who .phone{font:700 15px/1.3 var(--mono);user-select:all}
+.who .phone a{color:inherit}
+.who .topic{display:inline-block;justify-self:start;font:700 12px/1 var(--mono);padding:5px 8px;border:2px solid var(--ink);border-radius:999px}
+.who .comment{color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.lead select{font:700 14px/1 var(--body);padding:10px;border:2px solid var(--ink);border-radius:10px;background:var(--paper);color:var(--ink);width:100%}
+.empty{padding:40px;text-align:center;color:var(--muted);border:2px dashed var(--line);border-radius:14px}
+@media (max-width:720px){.lead{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <form class="login" id="login" hidden>
+    <h1>Вход</h1>
+    <label for="pw">Пароль администратора</label>
+    <input id="pw" type="password" autocomplete="current-password" required>
+    <button class="btn btn-hot" type="submit" id="login-btn">Войти</button>
+    <div class="msg" id="login-msg" role="alert" hidden></div>
+  </form>
+
+  <div id="panel" hidden>
+    <div class="bar">
+      <h1>Заявки</h1>
+      <div class="tools">
+        <span class="updated" id="updated"></span>
+        <button class="btn" type="button" id="refresh">Обновить</button>
+        <button class="btn" type="button" id="logout">Выйти</button>
+      </div>
+    </div>
+    <div class="bar">
+      <div class="filters" role="group" aria-label="Фильтр по статусу">
+        <button type="button" data-filter="" aria-pressed="true">Все</button>
+        <button type="button" data-filter="новая" aria-pressed="false">Новые</button>
+        <button type="button" data-filter="в работе" aria-pressed="false">В работе</button>
+        <button type="button" data-filter="закрыта" aria-pressed="false">Закрытые</button>
+      </div>
+    </div>
+    <div class="msg" id="panel-msg" role="alert" hidden></div>
+    <div class="list" id="list"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var STATUSES = ["новая", "в работе", "закрыта"];
+  var $ = function(id){ return document.getElementById(id); };
+  var token = null, filter = "";
+  try { token = sessionStorage.getItem("vydyhai_token"); } catch(e){}
+
+  function saveToken(t){ token = t; try { t ? sessionStorage.setItem("vydyhai_token", t) : sessionStorage.removeItem("vydyhai_token"); } catch(e){} }
+  function showLogin(text){
+    saveToken(null);
+    $("panel").hidden = true; $("login").hidden = false;
+    $("login-msg").hidden = !text; $("login-msg").textContent = text || "";
+    $("pw").focus();
+  }
+  function api(path, opts){
+    opts = opts || {};
+    opts.headers = Object.assign({"Content-Type":"application/json", "Authorization":"Bearer " + token}, opts.headers || {});
+    return fetch(path, opts).then(function(r){
+      return r.json().catch(function(){ return {}; }).then(function(data){
+        if (r.status === 401) { showLogin("Сессия закончилась, войдите снова."); throw new Error("unauthorized"); }
+        if (!r.ok) throw new Error(data.error || "Ошибка " + r.status);
+        return data;
+      });
+    });
+  }
+
+  function fmt(iso){
+    return new Date(iso).toLocaleString("ru-RU", {timeZone:"Europe/Chisinau", day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit"});
+  }
+  function el(tag, cls, text){ var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+
+  function render(leads){
+    var list = $("list"); list.textContent = "";
+    if (!leads.length) {
+      list.appendChild(el("div", "empty", filter ? "Заявок со статусом «" + filter + "» нет." : "Заявок пока нет. Они появятся здесь, как только кто-то заполнит форму на сайте."));
+      return;
+    }
+    leads.forEach(function(l){
+      var row = el("article", "lead"); row.dataset.status = l.status;
+      var meta = el("div", "meta"); meta.appendChild(el("b", null, "#" + l.id)); meta.appendChild(document.createTextNode(fmt(l.created_at)));
+      var who = el("div", "who");
+      who.appendChild(el("div", "name", l.name + (l.age ? ", " + l.age : "")));
+      var phone = el("div", "phone"); var a = el("a", null, l.phone); a.href = "tel:" + l.phone.replace(/[^\d+]/g, ""); phone.appendChild(a); who.appendChild(phone);
+      if (l.topic) who.appendChild(el("span", "topic", l.topic));
+      if (l.comment) who.appendChild(el("div", "comment", l.comment));
+      var sel = el("select"); sel.setAttribute("aria-label", "Статус заявки #" + l.id);
+      STATUSES.forEach(function(s){ var o = el("option", null, s); o.value = s; if (s === l.status) o.selected = true; sel.appendChild(o); });
+      sel.addEventListener("change", function(){
+        sel.disabled = true;
+        api("/api/leads", {method:"PATCH", body: JSON.stringify({id:l.id, status:sel.value})})
+          .then(function(){ load(); })
+          .catch(function(e){ if (e.message !== "unauthorized") { showPanelMsg(e.message); sel.value = l.status; sel.disabled = false; } });
+      });
+      row.appendChild(meta); row.appendChild(who); row.appendChild(sel);
+      list.appendChild(row);
+    });
+  }
+  function showPanelMsg(text){ $("panel-msg").hidden = !text; $("panel-msg").textContent = text || ""; }
+
+  function load(){
+    showPanelMsg("");
+    var q = filter ? "?status=" + encodeURIComponent(filter) : "";
+    return api("/api/leads" + q).then(function(leads){
+      render(leads);
+      $("updated").textContent = "обновлено " + new Date().toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+    }).catch(function(e){ if (e.message !== "unauthorized") showPanelMsg(e.message); });
+  }
+
+  function openPanel(){ $("login").hidden = true; $("panel").hidden = false; load(); }
+
+  $("login").addEventListener("submit", function(e){
+    e.preventDefault();
+    var btn = $("login-btn"); btn.disabled = true; $("login-msg").hidden = true;
+    fetch("/api/login", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({password: $("pw").value})})
+      .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(d){ if (!r.ok) throw new Error(d.error || "Не удалось войти"); return d; }); })
+      .then(function(d){ saveToken(d.token); $("pw").value = ""; openPanel(); })
+      .catch(function(err){ $("login-msg").textContent = err.message; $("login-msg").hidden = false; })
+      .then(function(){ btn.disabled = false; });
+  });
+  $("logout").addEventListener("click", function(){ showLogin(""); });
+  $("refresh").addEventListener("click", load);
+  document.querySelectorAll("[data-filter]").forEach(function(b){
+    b.addEventListener("click", function(){
+      filter = b.dataset.filter;
+      document.querySelectorAll("[data-filter]").forEach(function(x){ x.setAttribute("aria-pressed", String(x === b)); });
+      load();
+    });
+  });
+
+  token ? openPanel() : showLogin("");
+})();
+</script>
+</body>
+</html>
