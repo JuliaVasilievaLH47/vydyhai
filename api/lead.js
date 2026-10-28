@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Не получилось сохранить заявку. Позвони нам: +373 79 537 088." });
+    return res.status(500).json({ error: "Не получилось сохранить заявку. Попробуй ещё раз чуть позже." });
   }
 
   // Заявка уже сохранена, поэтому сбой Telegram не должен ломать ответ посетителю
