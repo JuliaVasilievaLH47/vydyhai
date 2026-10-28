@@ -538,7 +538,6 @@ footer .wrap{display:grid;gap:20px}
             <div><h3>Семинар</h3><p>Встреча в школе или онлайн: разбираем мифы, задаём любые вопросы.</p></div>
           </div>
           <div class="hotline sticker">
-            <div class="row"><div><a class="num" href="tel:+37379537088">+373 79 537 088</a><small>Наш телефон: запись к врачу, психологу или на семинар</small></div><button class="copy" type="button" data-copy="+37379537088">Скопировать</button></div>
             <div class="row"><div><a class="num" href="tel:080010001">0 800 10001</a><small>Зелёная линия Минздрава Молдовы: помощь в отказе от курения, бесплатно</small></div><button class="copy" type="button" data-copy="080010001">Скопировать</button></div>
             <div class="row"><div><a class="num" href="tel:116111">116 111</a><small>Telefonul Copilului: психологическая помощь детям и подросткам, круглосуточно, бесплатно и анонимно. Есть чат на <a href="https://telefonulcopilului.md" target="_blank" rel="noopener">telefonulcopilului.md</a></small></div><button class="copy" type="button" data-copy="116111">Скопировать</button></div>
             <div class="row"><div><a class="num" href="tel:112">112</a><small>Если плохо прямо сейчас: экстренная служба</small></div><button class="copy" type="button" data-copy="112">Скопировать</button></div>
@@ -692,7 +691,7 @@ footer .wrap{display:grid;gap:20px}
         form.reset(); render();
       })
       .catch(function(err){
-        var msg = err && err.message && err.message !== "error" && err.message !== "Failed to fetch" ? err.message : "Не получилось отправить заявку. Позвони нам: +373 79 537 088.";
+        var msg = err && err.message && err.message !== "error" && err.message !== "Failed to fetch" ? err.message : "Не получилось отправить заявку. Попробуй ещё раз чуть позже.";
         show("err", msg);
       })
       .then(function(){ btn.disabled = false; btn.textContent = "Отправить заявку"; });
