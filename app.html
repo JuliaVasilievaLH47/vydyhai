@@ -85,7 +85,7 @@ input{font:500 16px/1.4 var(--body);width:100%;padding:12px 14px;border:2px soli
   <section id="outside" class="center" hidden>
     <div class="big" aria-hidden="true">📱</div>
     <h1>Откройте приложение в Telegram</h1>
-    <p class="sub">Запись на консультацию работает только внутри Telegram. Найдите бота «Выдыхай заявки» и нажмите кнопку меню «Записаться».</p>
+    <p class="sub">Запись на консультацию работает только внутри Telegram. Откройте бота «Выдыхай заявки» (@vydyhai_leads_bot) и нажмите кнопку меню «Записаться».</p>
     <a class="btn btn-hot" id="bot-link" hidden>Открыть бота</a>
   </section>
 
@@ -158,7 +158,7 @@ input{font:500 16px/1.4 var(--body);width:100%;padding:12px 14px;border:2px soli
 <script>
 (function(){
   // username бота (латиница, без «@»), например "vydyhai_bot". Пока пусто — на экране «Откройте в Telegram» нет ссылки.
-  var BOT_USERNAME = "";
+  var BOT_USERNAME = "vydyhai_leads_bot";
 
   var $ = function(id){ return document.getElementById(id); };
   var tg = window.Telegram && window.Telegram.WebApp;
