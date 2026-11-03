@@ -598,7 +598,7 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
     $("exp-form").reset();
     $("e-fields").disabled = true; $("e-fields").hidden = false;
     $("e-save").disabled = true; $("e-save").hidden = false;
-    msg("e-msg", ""); $("e-status").textContent = "Распознаю чек… Обычно это занимает 5–20 секунд.";
+    msg("e-msg", ""); $("e-status").textContent = "Распознаю чек… Обычно это 5–20 секунд, если сервис перегружен — до минуты.";
     if (!$("exp-dlg").open) $("exp-dlg").showModal();
 
     api("/api/expense-scan", {method:"POST", body: JSON.stringify({file:file.data, type:file.type})})

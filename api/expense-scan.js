@@ -5,8 +5,28 @@ import { isAdmin, readBody, readFile, clean, env, CATEGORIES } from "./_lib.js";
 
 // Interactions API — рекомендованный Google интерфейс. Api-Revision закрепляет формат ответа (steps).
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/interactions";
-const GEMINI_MODEL = "gemini-3.8-flash"; // стабильная, есть на бесплатном тарифе, читает изображения и PDF
 const API_REVISION = "2026-05-20";
+
+// Обе модели стабильные, есть на бесплатном тарифе, читают изображения и PDF, умеют отвечать по JSON-схеме.
+// Основная — точнее; запасная (Flash-Lite) — с отдельным лимитом, выручает, когда основная перегружена.
+const PRIMARY_MODEL = "gemini-3.8-flash";
+const FALLBACK_MODEL = "gemini-3.5-flash-lite";
+
+// План попыток: основная модель → через 2 с ещё раз основная → запасная.
+// Все попытки вместе укладываются в DEADLINE_MS, а он — в maxDuration 60 с из vercel.json
+// (оставляем запас на проверку файла, разбор ответа и отправку ответа браузеру).
+const ATTEMPTS = [
+  { model: PRIMARY_MODEL, timeout: 18_000 },
+  { model: PRIMARY_MODEL, timeout: 18_000, delay: 2_000 },
+  { model: FALLBACK_MODEL, timeout: 25_000 },
+];
+const DEADLINE_MS = 52_000;
+const MIN_ATTEMPT_MS = 3_000; // если до дедлайна осталось меньше — новую попытку не начинаем
+// Временные ошибки, при которых есть смысл повторить или перейти на запасную модель:
+// 429 — лимит бесплатного тарифа, 503 — перегрузка, 500/504 — сбой или таймаут на стороне Google.
+const TRANSIENT = new Set([429, 500, 503, 504]);
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const BUSY = "Сервис распознавания сейчас перегружен или исчерпан бесплатный лимит. Попробуйте позже.";
 const FAILED = "Не удалось распознать чек. Попробуйте ещё раз чуть позже.";
@@ -59,6 +79,62 @@ function outputText(data) {
   return text;
 }
 
+// Один запрос к Gemini. Бросает исключение при таймауте или сбое сети.
+async function callGemini(apiKey, model, input, timeout) {
+  const res = await fetch(GEMINI_URL, {
+    method: "POST",
+    headers: {
+      "x-goog-api-key": apiKey,
+      "Content-Type": "application/json",
+      "Api-Revision": API_REVISION,
+    },
+    body: JSON.stringify({
+      model,
+      input,
+      response_format: { type: "text", mime_type: "application/json", schema: SCHEMA },
+      store: false, // не хранить запрос в истории Interactions API
+    }),
+    signal: AbortSignal.timeout(timeout),
+  });
+  return { status: res.status, ok: res.ok, raw: await res.text() };
+}
+
+// Проходит по плану ATTEMPTS. Возвращает {raw, model} при успехе,
+// {busy: true} — если все попытки упёрлись во временные ошибки, {failed: true} — при постоянной ошибке.
+async function askGemini(input) {
+  // Ключ читаем до попыток: если он не задан, это ошибка настройки, а не «временная перегрузка»
+  const apiKey = env("GEMINI_API_KEY");
+  const started = Date.now();
+  for (let i = 0; i < ATTEMPTS.length; i++) {
+    const { model, timeout, delay = 0 } = ATTEMPTS[i];
+    const label = `${model}, попытка ${i + 1}/${ATTEMPTS.length}`;
+    if (delay) await sleep(delay);
+
+    const left = DEADLINE_MS - (Date.now() - started);
+    if (left < MIN_ATTEMPT_MS) {
+      console.warn(`expense-scan: ${label} пропущена — до дедлайна осталось ${left} мс`);
+      break;
+    }
+
+    const t0 = Date.now();
+    try {
+      const r = await callGemini(apiKey, model, input, Math.min(timeout, left));
+      if (r.ok) {
+        console.log(`expense-scan: ответила модель ${model} (${label}, ${Date.now() - t0} мс, всего ${Date.now() - started} мс)`);
+        return { raw: r.raw, model };
+      }
+      console.error(`expense-scan: ${label} → HTTP ${r.status} за ${Date.now() - t0} мс: ${r.raw.slice(0, 1000)}`);
+      // Постоянная ошибка (неверный ключ, плохой запрос): повтор и запасная модель не помогут
+      if (!TRANSIENT.has(r.status)) return { failed: true };
+    } catch (err) {
+      // Таймаут или сеть — считаем временной ошибкой и идём дальше по плану
+      const why = err.name === "TimeoutError" ? "таймаут" : err.message;
+      console.error(`expense-scan: ${label} → ${why} за ${Date.now() - t0} мс`);
+    }
+  }
+  return { busy: true };
+}
+
 // Проверяем ответ модели сами: схема не гарантирует осмысленных значений
 function normalize(r) {
   const amount = Number(r.amount);
@@ -94,40 +170,21 @@ export default async function handler(req, res) {
 
   let gemini;
   try {
-    gemini = await fetch(GEMINI_URL, {
-      method: "POST",
-      headers: {
-        "x-goog-api-key": env("GEMINI_API_KEY"),
-        "Content-Type": "application/json",
-        "Api-Revision": API_REVISION,
-      },
-      body: JSON.stringify({
-        model: GEMINI_MODEL,
-        input,
-        response_format: { type: "text", mime_type: "application/json", schema: SCHEMA },
-        store: false, // не хранить запрос в истории Interactions API
-      }),
-      signal: AbortSignal.timeout(50_000),
-    });
+    gemini = await askGemini(input);
   } catch (err) {
-    // Таймаут или сеть — для админа это «попробуйте позже»
-    console.error("Gemini fetch failed:", err);
-    return res.status(503).json({ error: BUSY });
+    // Например, не задан GEMINI_API_KEY
+    console.error("expense-scan:", err);
+    return res.status(500).json({ error: FAILED });
   }
-
-  const raw = await gemini.text();
-  if (!gemini.ok) {
-    console.error(`Gemini ${gemini.status}: ${raw.slice(0, 2000)}`);
-    // 429 — превышен лимит бесплатного тарифа, 500/503/504 — перегрузка у Google
-    if ([429, 500, 503, 504].includes(gemini.status)) return res.status(503).json({ error: BUSY });
-    return res.status(502).json({ error: FAILED });
-  }
+  // Все попытки упёрлись в перегрузку или лимит — для админа это «попробуйте позже»
+  if (gemini.busy) return res.status(503).json({ error: BUSY });
+  if (gemini.failed) return res.status(502).json({ error: FAILED });
 
   let result;
   try {
-    result = JSON.parse(outputText(JSON.parse(raw)));
+    result = JSON.parse(outputText(JSON.parse(gemini.raw)));
   } catch (err) {
-    console.error("Gemini: не удалось разобрать ответ:", err, raw.slice(0, 2000));
+    console.error(`expense-scan: не удалось разобрать ответ ${gemini.model}:`, err, gemini.raw.slice(0, 2000));
     return res.status(502).json({ error: FAILED });
   }
 
