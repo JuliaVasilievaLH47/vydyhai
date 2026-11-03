@@ -1,5 +1,6 @@
-// POST /api/lead — принимает заявку с сайта, сохраняет в Supabase и пишет владельцу в Telegram
-import { supabase, telegram, escapeHtml, readBody, clean } from "./_lib.js";
+// POST /api/lead — принимает заявку с сайта, сохраняет в Supabase и пишет владельцу в Telegram.
+// Запись в историю этапов («создана → Новая») делает триггер в базе.
+import { supabase, telegram, escapeHtml, readBody, clean, phoneOk } from "./_lib.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -21,7 +22,7 @@ export default async function handler(req, res) {
 
   if (!name && !phone) return res.status(400).json({ error: "Форма пустая. Напиши имя и телефон." });
   if (!name) return res.status(400).json({ error: "Напиши, как к тебе обращаться." });
-  if (phone.replace(/\D/g, "").length < 6) {
+  if (!phoneOk(phone)) {
     return res.status(400).json({ error: "Проверь номер телефона: в нём должно быть хотя бы 6 цифр." });
   }
 
@@ -29,7 +30,8 @@ export default async function handler(req, res) {
   try {
     [lead] = await supabase("leads", {
       method: "POST",
-      body: { name, phone, age, topic, comment },
+      // Заявка с сайта всегда попадает в воронку на этап «Новая» с источником «Сайт»
+      body: { name, phone, age, topic, comment, source: "Сайт", status: "Новая" },
       prefer: "return=representation",
     });
   } catch (err) {

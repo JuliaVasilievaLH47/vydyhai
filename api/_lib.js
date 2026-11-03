@@ -1,7 +1,12 @@
 // Общие помощники для серверных функций. Файлы с "_" в начале Vercel не публикует как адреса.
 import crypto from "node:crypto";
 
-export const STATUSES = ["новая", "в работе", "закрыта"];
+// Этапы воронки. Тот же список — в admin.html и в check-ограничении supabase.sql.
+// Источники («Сайт» / «Вручную») задаются в api/lead.js и api/leads.js, ограничение — в supabase.sql.
+export const STATUSES = ["Новая", "Связались", "Записан на консультацию", "Консультация проведена", "Отказ"];
+
+// В телефоне должно быть хотя бы 6 цифр (та же проверка — в формах index.html и admin.html)
+export const phoneOk = (phone) => String(phone).replace(/\D/g, "").length >= 6;
 
 function env(name) {
   const value = process.env[name];
