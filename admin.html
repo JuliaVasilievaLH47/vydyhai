@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Выдыхай · Клиенты</title>
+<title>Выдыхай · Админка</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -87,6 +87,44 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
 .history span{font-weight:700}
 .history small{display:block;color:var(--muted)}
 @media (max-width:480px){.info{grid-template-columns:1fr;gap:0}.info dd{margin-bottom:8px}}
+
+/* Вкладки */
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.tabs button{font:800 15px/1 var(--body);padding:11px 18px;border:2px solid var(--ink);border-radius:999px;background:var(--card);color:var(--ink);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+.btn-sm{font-size:13px;padding:8px 12px;border-width:2px;box-shadow:2px 2px 0 var(--ink)}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;padding:0}
+
+/* Расходы */
+.month{display:flex;align-items:center;gap:8px}
+.month b{font:800 16px/1.2 var(--body);min-width:150px;text-align:center}
+.totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:18px}
+.total-card{background:var(--card);border:2px solid var(--ink);border-radius:14px;padding:14px 16px;display:grid;gap:6px}
+.total-card h2{font:800 15px/1.3 var(--body);margin:0 0 4px}
+.trow{display:flex;justify-content:space-between;gap:12px;font-size:14px}
+.trow span:last-child{font:700 14px/1.4 var(--mono);white-space:nowrap}
+.trow.sum{border-top:2px solid var(--ink);padding-top:8px;margin-top:4px;font-weight:800;font-size:15px}
+.trow.sum span:last-child{font-size:17px}
+.exp-list{display:grid;gap:10px}
+.exp{background:var(--card);border:2px solid var(--ink);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:100px minmax(0,1fr) auto auto;gap:12px;align-items:center}
+.exp-date{font:500 13px/1.3 var(--mono);color:var(--muted)}
+.exp-main{display:grid;gap:4px;justify-items:start;min-width:0}
+.exp-vendor{font-weight:700;overflow-wrap:anywhere}
+.exp-amount{font:700 15px/1.3 var(--mono);white-space:nowrap}
+@media (max-width:640px){.exp{grid-template-columns:minmax(0,1fr) auto}.exp-date{grid-column:1/-1}}
+
+/* Экран проверки чека */
+#exp-dlg{width:min(920px,calc(100vw - 32px))}
+.review{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+.preview{border:2px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper);display:grid;gap:8px;justify-items:center;min-height:200px;padding:8px}
+.preview img{display:block;max-width:100%;max-height:65vh;object-fit:contain}
+.preview iframe{width:100%;height:65vh;border:0;background:#fff}
+.fields{display:grid;gap:6px;min-width:0}
+.fields fieldset{border:0;padding:0;margin:0;min-width:0;display:grid;gap:6px}
+.two{display:grid;grid-template-columns:2fr 1fr;gap:10px}
+.two > div{display:grid;gap:6px}
+.status{margin:0;font-weight:700;color:var(--muted)}
+@media (max-width:700px){.review{grid-template-columns:1fr}.preview img{max-height:40vh}.preview iframe{height:40vh}}
 </style>
 </head>
 <body>
@@ -101,18 +139,78 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
 
   <div id="panel" hidden>
     <div class="bar">
-      <h1>Клиенты</h1>
+      <nav class="tabs" role="tablist" aria-label="Разделы админки">
+        <button type="button" role="tab" id="tab-clients" aria-controls="clients-view" aria-selected="true">Клиенты</button>
+        <button type="button" role="tab" id="tab-expenses" aria-controls="expenses-view" aria-selected="false">Расходы</button>
+      </nav>
       <div class="tools">
         <span class="updated" id="updated"></span>
-        <button class="btn btn-hot" type="button" id="add">Добавить клиента</button>
         <button class="btn" type="button" id="refresh">Обновить</button>
         <button class="btn" type="button" id="logout">Выйти</button>
       </div>
     </div>
     <div class="msg" id="panel-msg" role="alert" hidden></div>
-    <div class="board" id="board" aria-label="Воронка клиентов"></div>
+
+    <section id="clients-view" role="tabpanel" aria-labelledby="tab-clients">
+      <div class="bar">
+        <h1>Клиенты</h1>
+        <button class="btn btn-hot" type="button" id="add">Добавить клиента</button>
+      </div>
+      <div class="board" id="board" aria-label="Воронка клиентов"></div>
+    </section>
+
+    <section id="expenses-view" role="tabpanel" aria-labelledby="tab-expenses" hidden>
+      <div class="bar">
+        <h1>Расходы</h1>
+        <div class="tools">
+          <div class="month">
+            <button class="x" type="button" id="m-prev" aria-label="Предыдущий месяц">‹</button>
+            <b id="m-label" aria-live="polite"></b>
+            <button class="x" type="button" id="m-next" aria-label="Следующий месяц">›</button>
+          </div>
+          <button class="btn btn-hot" type="button" id="exp-add">Добавить чек</button>
+          <!-- Без capture: телефон сам предложит камеру, галерею или файлы -->
+          <input class="vh" type="file" id="exp-file" accept="image/*,application/pdf" tabindex="-1" aria-hidden="true">
+        </div>
+      </div>
+      <div class="totals" id="exp-totals"></div>
+      <div class="exp-list" id="exp-list"></div>
+    </section>
   </div>
 </div>
+
+<!-- Экран проверки распознанного чека -->
+<dialog id="exp-dlg" aria-labelledby="e-title">
+  <form class="dlg" id="exp-form" novalidate>
+    <div class="dlg-head">
+      <h2 id="e-title">Проверьте чек</h2>
+      <button class="x" type="button" data-close aria-label="Закрыть">×</button>
+    </div>
+    <div class="review">
+      <div class="preview" id="e-preview"></div>
+      <div class="fields">
+        <p class="status" id="e-status" role="status"></p>
+        <div class="msg" id="e-msg" role="alert" hidden></div>
+        <fieldset id="e-fields" disabled>
+          <div class="two">
+            <div><label class="lbl" for="e-amount">Сумма</label><input id="e-amount" inputmode="decimal" autocomplete="off"></div>
+            <div><label class="lbl" for="e-currency">Валюта</label><input id="e-currency" maxlength="3" autocomplete="off" style="text-transform:uppercase"></div>
+          </div>
+          <label class="lbl" for="e-date">Дата</label>
+          <input id="e-date" type="date">
+          <label class="lbl" for="e-vendor">Продавец</label>
+          <input id="e-vendor" maxlength="120" autocomplete="off">
+          <label class="lbl" for="e-category">Категория</label>
+          <select id="e-category"></select>
+        </fieldset>
+        <div class="row" style="margin-top:10px">
+          <button class="btn btn-hot" type="submit" id="e-save" disabled>Сохранить</button>
+          <button class="btn" type="button" data-close>Отмена</button>
+        </div>
+      </div>
+    </div>
+  </form>
+</dialog>
 
 <!-- Карточка клиента -->
 <dialog id="card-dlg" aria-labelledby="d-title">
@@ -165,7 +263,7 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
   try { token = sessionStorage.getItem("vydyhai_token"); } catch(e){}
 
   function saveToken(t){ token = t; try { t ? sessionStorage.setItem("vydyhai_token", t) : sessionStorage.removeItem("vydyhai_token"); } catch(e){} }
-  function closeDialogs(){ ["card-dlg", "add-dlg"].forEach(function(id){ if ($(id).open) $(id).close(); }); }
+  function closeDialogs(){ ["card-dlg", "add-dlg", "exp-dlg"].forEach(function(id){ if ($(id).open) $(id).close(); }); }
   function showLogin(text){
     saveToken(null); closeDialogs();
     $("panel").hidden = true; $("login").hidden = false;
@@ -175,14 +273,22 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
   function api(path, opts){
     opts = opts || {};
     opts.headers = Object.assign({"Content-Type":"application/json", "Authorization":"Bearer " + token}, opts.headers || {});
-    return fetch(path, opts).then(function(r){
+    return fetch(path, opts).catch(function(){
+      throw new Error("Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.");
+    }).then(function(r){
       return r.json().catch(function(){ return {}; }).then(function(data){
         if (r.status === 401) { showLogin("Сессия закончилась, войдите снова."); throw new Error("unauthorized"); }
-        if (!r.ok) throw new Error(data.error || "Ошибка " + r.status);
+        if (!r.ok) throw new Error(data.error || HTTP_ERRORS[r.status] || "Ошибка " + r.status);
         return data;
       });
     });
   }
+  // Ответы самого Vercel (не наших функций) приходят без JSON — переводим их на понятный язык
+  var HTTP_ERRORS = {
+    413: "Файл слишком большой для отправки. Выберите файл поменьше.",
+    504: "Сервер не дождался ответа. Попробуйте позже."
+  };
+  function stamp(){ $("updated").textContent = "обновлено " + new Date().toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"}); }
   function setStage(id, status){ return api("/api/leads", {method:"PATCH", body: JSON.stringify({id:id, status:status})}); }
 
   // Дата с часами и минутами по Кишинёву — как в уведомлении Telegram о заявке
@@ -253,8 +359,7 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
 
   function load(){
     return api("/api/leads").then(function(data){
-      leads = data; renderBoard();
-      $("updated").textContent = "обновлено " + new Date().toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+      leads = data; renderBoard(); stamp();
     }).catch(function(e){ if (e.message !== "unauthorized") msg("panel-msg", e.message); });
   }
 
@@ -348,8 +453,242 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
     b.addEventListener("click", function(){ b.closest("dialog").close(); });
   });
 
+  // ---------- Расходы ----------
+  // Категории. Тот же список — в api/_lib.js и в check-ограничении expenses (supabase.sql)
+  var CATEGORIES = ["Реклама", "Печать материалов", "Консультанты", "Сервисы и подписки", "Прочее"];
+  var MAX_FILE = 3 * 1024 * 1024; // как MAX_FILE_BYTES в api/_lib.js: после base64 укладывается в лимит Vercel 4,5 МБ
+  var MAX_SIDE = 2000;            // фото уменьшаем до 2000 px по длинной стороне — текст чека остаётся читаемым
+  var month = chisinauToday().slice(0, 7), pending = null, scanSeq = 0;
+
+  function chisinauToday(){
+    var p = {};
+    new Intl.DateTimeFormat("en-US", {timeZone:"Europe/Chisinau", year:"numeric", month:"2-digit", day:"2-digit"})
+      .formatToParts(new Date()).forEach(function(x){ p[x.type] = x.value; });
+    return p.year + "-" + p.month + "-" + p.day;
+  }
+  function monthLabel(m){
+    var s = new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7) - 1, 1)).toLocaleDateString("ru-RU", {month:"long", year:"numeric", timeZone:"UTC"});
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  function shiftMonth(delta){
+    var y = +month.slice(0, 4), m = +month.slice(5, 7) + delta;
+    if (m < 1) { m = 12; y--; } else if (m > 12) { m = 1; y++; }
+    month = y + "-" + (m < 10 ? "0" : "") + m;
+    loadExpenses();
+  }
+  function money(n, cur){ return Number(n).toLocaleString("ru-RU", {minimumFractionDigits:2, maximumFractionDigits:2}) + " " + cur; }
+  function fmtDate(d){ return d.slice(8, 10) + "." + d.slice(5, 7) + "." + d.slice(0, 4); }
+  function trow(label, value){ var r = el("div", "trow"); r.appendChild(el("span", null, label)); r.appendChild(el("span", null, value)); return r; }
+
+  function loadExpenses(){
+    var m = month;
+    $("m-label").textContent = monthLabel(m);
+    return api("/api/expenses?month=" + m).then(function(data){
+      if (m !== month) return; // пока грузилось, месяц уже переключили
+      renderExpenses(data); stamp();
+    }).catch(function(e){ if (e.message !== "unauthorized") msg("panel-msg", e.message); });
+  }
+
+  function renderExpenses(data){
+    var tot = $("exp-totals"), list = $("exp-list");
+    tot.textContent = ""; list.textContent = "";
+
+    // Итоги отдельно по каждой валюте; если расходов нет — нули в леях
+    var totals = data.totals.length ? data.totals
+      : [{currency:"MDL", total:0, categories: CATEGORIES.map(function(c){ return {category:c, amount:0}; })}];
+    totals.forEach(function(t){
+      var card = el("section", "total-card");
+      card.appendChild(el("h2", null, "Итоги за " + monthLabel(month).toLowerCase() + " · " + t.currency));
+      t.categories.forEach(function(c){ card.appendChild(trow(c.category, money(c.amount, t.currency))); });
+      var sum = trow("Итого за месяц", money(t.total, t.currency)); sum.className += " sum";
+      card.appendChild(sum);
+      tot.appendChild(card);
+    });
+
+    if (!data.items.length) {
+      list.appendChild(el("div", "empty", "За " + monthLabel(month).toLowerCase() + " расходов нет. Нажмите «Добавить чек»."));
+      return;
+    }
+    data.items.forEach(function(x){
+      var row = el("article", "exp");
+      row.appendChild(el("span", "exp-date", fmtDate(x.expense_date)));
+      var main = el("div", "exp-main");
+      main.appendChild(el("div", "exp-vendor", x.vendor || "Продавец не указан"));
+      main.appendChild(el("span", "src", x.category));
+      row.appendChild(main);
+      row.appendChild(el("span", "exp-amount", money(x.amount, x.currency)));
+      var b = el("button", "btn btn-sm", x.file_type === "application/pdf" ? "Оригинал (PDF)" : "Оригинал"); b.type = "button";
+      b.addEventListener("click", function(){ openOriginal(x.id, b); });
+      row.appendChild(b);
+      list.appendChild(row);
+    });
+  }
+
+  // Оригинал открывается по временной ссылке (5 минут). Вкладку открываем сразу по клику,
+  // иначе браузер заблокирует её как всплывающее окно, а адрес подставляем, когда он придёт.
+  function openOriginal(id, btn){
+    var w = window.open("", "_blank");
+    btn.disabled = true; msg("panel-msg", "");
+    api("/api/expenses?file=" + id).then(function(d){
+      if (w) { w.opener = null; w.location.href = d.url; } else location.href = d.url;
+    }).catch(function(e){
+      if (w) w.close();
+      if (e.message !== "unauthorized") msg("panel-msg", e.message);
+    }).then(function(){ btn.disabled = false; });
+  }
+
+  // ---------- Подготовка файла в браузере ----------
+  function readDataUrl(blob){
+    return new Promise(function(ok, fail){
+      var r = new FileReader();
+      r.onload = function(){ ok(r.result); };
+      r.onerror = function(){ fail(new Error("Не удалось прочитать файл.")); };
+      r.readAsDataURL(blob);
+    });
+  }
+  function loadImage(file){
+    return new Promise(function(ok, fail){
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function(){ URL.revokeObjectURL(url); ok(img); };
+      img.onerror = function(){ URL.revokeObjectURL(url); fail(new Error("Не удалось открыть фото. Сохраните его как JPEG или сфотографируйте чек заново.")); };
+      img.src = url;
+    });
+  }
+  // Уменьшаем фото и сохраняем в JPEG, чтобы запрос уложился в лимит Vercel 4,5 МБ
+  function compress(img){
+    var scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    var c = document.createElement("canvas");
+    c.width = Math.round(img.naturalWidth * scale); c.height = Math.round(img.naturalHeight * scale);
+    var ctx = c.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height); // прозрачный PNG не станет чёрным
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    function toBlob(q){
+      return new Promise(function(ok, fail){ c.toBlob(function(b){ b ? ok(b) : fail(new Error("Не удалось сжать фото.")); }, "image/jpeg", q); });
+    }
+    return toBlob(0.85).then(function(b){ return b.size > 2.5 * 1024 * 1024 ? toBlob(0.6) : b; }).then(function(b){
+      if (b.size > MAX_FILE) throw new Error("Фото слишком большое даже после сжатия. Сфотографируйте чек ещё раз.");
+      return b;
+    });
+  }
+  // Результат: {type, data (base64 без префикса), preview (адрес для превью)}
+  function prepareFile(f){
+    if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) {
+      if (f.size > MAX_FILE) return Promise.reject(new Error("PDF больше 3 МБ. Сохраните его меньшего размера или сфотографируйте чек."));
+      return readDataUrl(f).then(function(url){ return {type:"application/pdf", data:url.split(",")[1], preview:URL.createObjectURL(f)}; });
+    }
+    if (!/^image\//.test(f.type) && !/\.(jpe?g|png|webp|heic|heif)$/i.test(f.name)) {
+      return Promise.reject(new Error("Подходят только фото или PDF."));
+    }
+    return loadImage(f).then(compress).then(function(blob){
+      return readDataUrl(blob).then(function(url){ return {type:"image/jpeg", data:url.split(",")[1], preview:URL.createObjectURL(blob)}; });
+    });
+  }
+
+  // ---------- Распознавание и экран проверки ----------
+  function startReview(file){
+    pending = file;
+    var seq = ++scanSeq;
+    var pv = $("e-preview"); pv.textContent = "";
+    if (file.type === "application/pdf") {
+      var fr = el("iframe"); fr.src = file.preview; fr.title = "Превью PDF"; pv.appendChild(fr);
+      var a = el("a", null, "Открыть PDF в новой вкладке"); a.href = file.preview; a.target = "_blank"; a.rel = "noopener"; pv.appendChild(a);
+    } else {
+      var im = el("img"); im.src = file.preview; im.alt = "Фото чека"; pv.appendChild(im);
+    }
+    $("exp-form").reset();
+    $("e-fields").disabled = true; $("e-fields").hidden = false;
+    $("e-save").disabled = true; $("e-save").hidden = false;
+    msg("e-msg", ""); $("e-status").textContent = "Распознаю чек… Обычно это занимает 5–20 секунд.";
+    if (!$("exp-dlg").open) $("exp-dlg").showModal();
+
+    api("/api/expense-scan", {method:"POST", body: JSON.stringify({file:file.data, type:file.type})})
+      .then(function(r){
+        if (seq !== scanSeq) return; // окно уже закрыли
+        $("e-amount").value = r.amount != null ? String(r.amount).replace(".", ",") : "";
+        $("e-currency").value = r.currency || "MDL";
+        $("e-date").value = r.date || "";
+        $("e-vendor").value = r.vendor || "";
+        $("e-category").value = r.category;
+        $("e-status").textContent = (r.amount == null || !r.date)
+          ? "Не все поля удалось прочитать — заполните пустые и проверьте остальные."
+          : "Проверьте поля по фото и при необходимости поправьте.";
+        $("e-fields").disabled = false; $("e-save").disabled = false;
+        $("e-amount").focus();
+      })
+      .catch(function(e){
+        if (seq !== scanSeq || e.message === "unauthorized") return;
+        // Не чек, лимит Gemini или ошибка — показываем причину, сохранять нечего
+        $("e-status").textContent = "";
+        $("e-fields").hidden = true; $("e-save").hidden = true;
+        msg("e-msg", e.message);
+      });
+  }
+
+  CATEGORIES.forEach(function(c){ var o = el("option", null, c); o.value = c; $("e-category").appendChild(o); });
+
+  $("exp-form").addEventListener("submit", function(e){
+    e.preventDefault();
+    if (!pending) return;
+    var amount = $("e-amount").value.replace(/\s/g, "").replace(",", ".");
+    var currency = $("e-currency").value.trim().toUpperCase();
+    var date = $("e-date").value;
+    var err = !(Number(amount) > 0) ? "Укажите сумму больше нуля."
+      : !/^[A-Z]{3}$/.test(currency) ? "Валюта — три латинские буквы, например MDL или EUR."
+      : !date ? "Укажите дату чека." : "";
+    if (err) { msg("e-msg", err); return; }
+
+    var btn = $("e-save"), file = pending;
+    btn.disabled = true; msg("e-msg", ""); $("e-status").textContent = "Сохраняю…";
+    api("/api/expenses", {method:"POST", body: JSON.stringify({
+      file:file.data, type:file.type, amount:amount, currency:currency, date:date,
+      vendor:$("e-vendor").value, category:$("e-category").value
+    })}).then(function(row){
+      month = row.expense_date.slice(0, 7); // показываем месяц, в который попал расход
+      $("exp-dlg").close();
+      loadExpenses();
+    }).catch(function(e){
+      if (e.message === "unauthorized") return;
+      $("e-status").textContent = ""; msg("e-msg", e.message); btn.disabled = false;
+    });
+  });
+
+  // «Отмена», крестик или Esc: ничего не сохраняем, освобождаем превью
+  $("exp-dlg").addEventListener("close", function(){
+    scanSeq++;
+    if (pending) { URL.revokeObjectURL(pending.preview); pending = null; }
+    $("e-preview").textContent = "";
+  });
+
+  $("exp-add").addEventListener("click", function(){ $("exp-file").value = ""; $("exp-file").click(); });
+  $("exp-file").addEventListener("change", function(){
+    var f = this.files && this.files[0];
+    if (!f) return;
+    msg("panel-msg", "");
+    prepareFile(f).then(startReview).catch(function(e){ msg("panel-msg", e.message); });
+  });
+  $("m-prev").addEventListener("click", function(){ shiftMonth(-1); });
+  $("m-next").addEventListener("click", function(){ shiftMonth(1); });
+
+  // ---------- Вкладки ----------
+  var tab = "clients";
+  function setTab(name){
+    tab = name;
+    $("tab-clients").setAttribute("aria-selected", String(name === "clients"));
+    $("tab-expenses").setAttribute("aria-selected", String(name === "expenses"));
+    $("clients-view").hidden = name !== "clients";
+    $("expenses-view").hidden = name !== "expenses";
+    try { history.replaceState(null, "", name === "expenses" ? "#expenses" : location.pathname); } catch(e){}
+    msg("panel-msg", "");
+    return name === "expenses" ? loadExpenses() : load();
+  }
+  $("tab-clients").addEventListener("click", function(){ setTab("clients"); });
+  $("tab-expenses").addEventListener("click", function(){ setTab("expenses"); });
+
   // ---------- Вход ----------
-  function openPanel(){ $("login").hidden = true; $("panel").hidden = false; load(); }
+  function openPanel(){
+    $("login").hidden = true; $("panel").hidden = false;
+    setTab(location.hash === "#expenses" ? "expenses" : "clients");
+  }
 
   $("login").addEventListener("submit", function(e){
     e.preventDefault();
@@ -361,7 +700,7 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
       .then(function(){ btn.disabled = false; });
   });
   $("logout").addEventListener("click", function(){ showLogin(""); });
-  $("refresh").addEventListener("click", function(){ msg("panel-msg", ""); load(); });
+  $("refresh").addEventListener("click", function(){ msg("panel-msg", ""); tab === "expenses" ? loadExpenses() : load(); });
 
   token ? openPanel() : showLogin("");
 })();

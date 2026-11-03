@@ -1,3 +1,7 @@
 {
-  "cleanUrls": true
+  "cleanUrls": true,
+  "functions": {
+    "api/expense-scan.js": { "maxDuration": 60 },
+    "api/expenses.js": { "maxDuration": 30 }
+  }
 }

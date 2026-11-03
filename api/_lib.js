@@ -8,25 +8,98 @@ export const STATUSES = ["Новая", "Связались", "Записан н�
 // В телефоне должно быть хотя бы 6 цифр (та же проверка — в формах index.html и admin.html)
 export const phoneOk = (phone) => String(phone).replace(/\D/g, "").length >= 6;
 
-function env(name) {
+// Категории расходов. Тот же список — в admin.html и в check-ограничении expenses (supabase.sql).
+export const CATEGORIES = ["Реклама", "Печать материалов", "Консультанты", "Сервисы и подписки", "Прочее"];
+
+// Файлы чеков: допустимые типы и размер. 3 МБ после base64 ≈ 4 МБ тела запроса —
+// укладывается в лимит Vercel 4,5 МБ. Фото браузер сжимает заранее, PDF приходит как есть.
+export const FILE_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+export const MAX_FILE_BYTES = 3 * 1024 * 1024;
+const RECEIPTS_BUCKET = "receipts";
+
+export function env(name) {
   const value = process.env[name];
   if (!value) throw new Error(`Не задана переменная окружения ${name}`);
   return value;
 }
 
-// Запрос к таблицам Supabase через REST. Ключ берётся только из настроек Vercel.
-export async function supabase(path, { method = "GET", body, prefer } = {}) {
-  const url = env("SUPABASE_URL").replace(/\/+$/, "") + "/rest/v1/" + path;
+const supabaseUrl = () => env("SUPABASE_URL").replace(/\/+$/, "");
+
+function supabaseHeaders(extra) {
   const key = env("SUPABASE_SERVICE_KEY");
-  const headers = { apikey: key, "Content-Type": "application/json" };
+  const headers = { apikey: key, ...extra };
   // Старые ключи (JWT) нужно передавать ещё и в Authorization, новые sb_secret_… — нет
   if (!key.startsWith("sb_")) headers.Authorization = `Bearer ${key}`;
+  return headers;
+}
+
+// Запрос к таблицам Supabase через REST. Ключ берётся только из настроек Vercel.
+export async function supabase(path, { method = "GET", body, prefer } = {}) {
+  const headers = supabaseHeaders({ "Content-Type": "application/json" });
   if (prefer) headers.Prefer = prefer;
 
-  const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const res = await fetch(supabaseUrl() + "/rest/v1/" + path, {
+    method, headers, body: body ? JSON.stringify(body) : undefined,
+  });
   const text = await res.text();
   if (!res.ok) throw new Error(`Supabase ${res.status}: ${text}`);
   return text ? JSON.parse(text) : null;
+}
+
+// ---------- Supabase Storage: приватный bucket receipts ----------
+
+export async function storageUpload(path, buffer, type) {
+  const res = await fetch(`${supabaseUrl()}/storage/v1/object/${RECEIPTS_BUCKET}/${path}`, {
+    method: "POST",
+    headers: supabaseHeaders({ "Content-Type": type, "x-upsert": "false" }),
+    body: buffer,
+  });
+  if (!res.ok) throw new Error(`Storage upload ${res.status}: ${await res.text()}`);
+}
+
+export async function storageRemove(path) {
+  const res = await fetch(`${supabaseUrl()}/storage/v1/object/${RECEIPTS_BUCKET}`, {
+    method: "DELETE",
+    headers: supabaseHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ prefixes: [path] }),
+  });
+  if (!res.ok) throw new Error(`Storage delete ${res.status}: ${await res.text()}`);
+}
+
+// Временная ссылка на файл (по умолчанию 5 минут)
+export async function storageSignedUrl(path, seconds = 300) {
+  const res = await fetch(`${supabaseUrl()}/storage/v1/object/sign/${RECEIPTS_BUCKET}/${path}`, {
+    method: "POST",
+    headers: supabaseHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ expiresIn: seconds }),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Storage sign ${res.status}: ${text}`);
+  const { signedURL } = JSON.parse(text);
+  // Supabase отдаёт относительный путь вида /object/sign/… (в старых версиях — /storage/v1/object/sign/…)
+  return supabaseUrl() + (signedURL.startsWith("/storage/v1") ? "" : "/storage/v1") + signedURL;
+}
+
+// ---------- Файл чека из тела запроса: {file: <base64>, type: <mime>} ----------
+
+const SIGNATURES = {
+  "image/jpeg": (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+  "image/png": (b) => b.subarray(0, 4).toString("hex") === "89504e47",
+  "image/webp": (b) => b.subarray(0, 4).toString("ascii") === "RIFF" && b.subarray(8, 12).toString("ascii") === "WEBP",
+  "application/pdf": (b) => b.subarray(0, 5).toString("ascii") === "%PDF-",
+};
+
+// Возвращает {buffer, base64, type} или {error: "текст для админа"}
+export function readFile(body) {
+  const type = String(body.type || "");
+  if (!FILE_TYPES.includes(type)) return { error: "Подходят только фото (JPEG, PNG, WebP) или PDF." };
+  const base64 = typeof body.file === "string" ? body.file.replace(/^data:[^,]*,/, "") : "";
+  if (!base64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) return { error: "Файл не получен. Выберите его ещё раз." };
+  const buffer = Buffer.from(base64, "base64");
+  if (buffer.length > MAX_FILE_BYTES) return { error: "Файл больше 3 МБ. Сожмите его или сфотографируйте чек." };
+  // Проверяем, что содержимое действительно того типа, который заявлен
+  if (!SIGNATURES[type](buffer)) return { error: "Файл повреждён или его тип не совпадает с содержимым." };
+  return { buffer, base64, type };
 }
 
 export async function telegram(text) {

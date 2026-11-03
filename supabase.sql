@@ -58,3 +58,38 @@ create trigger leads_log_stage
 -- Доступ есть только у сервера на Vercel с секретным ключом.
 alter table public.leads enable row level security;
 alter table public.lead_stage_history enable row level security;
+
+-- ---------- Расходы (то же, что migrations/002_expenses.sql) ----------
+-- Категории: этот же список есть в api/_lib.js и admin.html (CATEGORIES).
+create table if not exists public.expenses (
+  id           bigint generated always as identity primary key,
+  created_at   timestamptz not null default now(),
+  expense_date date not null,
+  amount       numeric(12,2) not null
+               constraint expenses_amount_check check (amount > 0),
+  currency     text not null default 'MDL'
+               constraint expenses_currency_check check (currency ~ '^[A-Z]{3}$'),
+  vendor       text not null default '',
+  category     text not null
+               constraint expenses_category_check check (category in (
+                 'Реклама', 'Печать материалов', 'Консультанты', 'Сервисы и подписки', 'Прочее'
+               )),
+  file_path    text not null,
+  file_type    text not null
+               constraint expenses_file_type_check check (file_type in (
+                 'image/jpeg', 'image/png', 'image/webp', 'application/pdf'
+               ))
+);
+
+create index if not exists expenses_date_idx on public.expenses (expense_date desc);
+alter table public.expenses enable row level security;
+
+-- Приватный bucket для оригиналов чеков. Политик на storage.objects для него не создаём:
+-- RLS там включён всегда, поэтому файлы доступны только серверу с секретным ключом.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('receipts', 'receipts', false, 5242880,
+        array['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
+on conflict (id) do update
+  set public             = false,
+      file_size_limit    = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
