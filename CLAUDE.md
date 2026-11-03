@@ -38,6 +38,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - В таблицах `leads` и `lead_stage_history` включён RLS без политик. Ключ anon/publishable доступа не имеет, работает только серверный ключ из Vercel.
 - `admin.html` разбит на вкладки «Клиенты» и «Расходы» (`#expenses` в адресе открывает вторую). На вкладке «Клиенты» доска из колонок по этапам. Этап меняется через `<select>` на карточке или перетаскиванием мышью. Карточка клиента, форма «Добавить клиента» и экран проверки чека сделаны на `<dialog>`.
 
+### Telegram Mini App (`app.html` → `/app`, `api/app.js`)
+- Пользователь определяется только по initData. Браузер шлёт его в заголовке `Authorization: tma <initData>`, `telegramUser()` в `_lib.js` проверяет HMAC-SHA256 по документации Telegram (ключ = `HMAC("WebAppData", TELEGRAM_BOT_TOKEN)`) и возраст `auth_date` не больше 24 ч. Без валидного initData ответ 401. Имя, `telegram_id` и `username` из тела запроса не принимаются.
+- Телефон необязателен. `requestContact` в `telegram-web-app.js` отдаёт подписанную строку `response`, сервер проверяет её через `verifyTelegramData()` (не старше 1 ч) и берёт номер, только если `contact.user_id` совпадает с проверенным пользователем. Иначе используется ручной ввод с проверкой `phoneOk`.
+- Запись — это строка в `leads` с `source: "Telegram"`, `status: "Записан на консультацию"`, `telegram_id`, `telegram_username`, `consultation_at`. Уведомление админу уходит через `telegram()`, как в `api/lead.js`.
+- Двойную запись не даёт допустить БД: уникальные частичные индексы `leads_consultation_slot_uniq` (один слот, кроме «Отказа») и `leads_telegram_active_uniq` (одна запись «Записан на консультацию» на пользователя). API распознаёт их по имени в тексте ошибки и отвечает 409, так же делает PATCH в `api/leads.js`.
+- Слоты (`HOURS`, `DAYS_AHEAD`, `MIN_LEAD_MS` в `api/app.js`) считаются по Europe/Chisinau. `chisinauToUtc()` переводит местное время в UTC с учётом перехода на летнее и зимнее время. Ограничение `leads_consultation_hour_check` требует, чтобы время было ровно началом часа.
+- Если страница открыта не в Telegram (`Telegram.WebApp.initData` пуст), показывается только заглушка, запросов к API нет. `BOT_USERNAME` в `app.html` задаёт ссылку на бота на заглушке.
+- На бесплатном тарифе Vercel не больше 12 serverless-функций, поэтому GET и POST Mini App сделаны в одном `api/app.js`.
+
 ### Расходы
 - Поток из двух шагов, чтобы до нажатия «Сохранить» ничего не сохранялось:
   1. `POST /api/expense-scan` отправляет файл в Gemini и возвращает поля. В БД и Storage ничего не пишет. Если это не чек, отвечает `422` с `not_receipt: true`. При лимите или перегрузке Gemini (429/5xx, таймаут) отвечает `503` с текстом «Попробуйте позже».
@@ -53,7 +62,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Этапы воронки** `Новая` / `Связались` / `Записан на консультацию` / `Консультация проведена` / `Отказ` записаны в трёх местах: `STATUSES` в `api/_lib.js`, `STATUSES` в `admin.html` и `check`-ограничение `leads_status_check` в `supabase.sql`. В CSS `admin.html` у каждого этапа есть свой цвет через `[data-stage="…"]`. Новый этап добавляется отдельной миграцией.
 - **Категории расходов** `Реклама` / `Печать материалов` / `Консультанты` / `Сервисы и подписки` / `Прочее` записаны в `CATEGORIES` в `api/_lib.js` (оттуда же берётся `enum` в JSON-схеме для Gemini), в `CATEGORIES` в `admin.html` и в `expenses_category_check` в `supabase.sql`. Если меняете категории, поправьте и описание категорий в `PROMPT` в `api/expense-scan.js`, а для работающей базы напишите миграцию.
 - **Типы и размер файлов чеков**: `FILE_TYPES` и `MAX_FILE_BYTES` в `_lib.js`, `MAX_FILE` в `admin.html`, `expenses_file_type_check` и настройки bucket (`file_size_limit`, `allowed_mime_types`) в SQL.
-- **Источники** `Сайт` / `Вручную` задаются в `api/lead.js` и `api/leads.js`, а ограничение на них — `leads_source_check`.
+- **Источники** `Сайт` / `Вручную` / `Telegram` задаются в `api/lead.js`, `api/leads.js` и `api/app.js`, а ограничение на них — `leads_source_check`. У бейджа источника в `admin.html` свой цвет через `.src[data-src="…"]`.
+- **Темы консультаций** в Mini App (`TOPICS` в `api/app.js`) повторяют radio `name="type"` формы в `index.html`, кроме «Просто перезвонить».
 - **Валидация формы** продублирована в `index.html` и `api/lead.js` с одинаковыми текстами ошибок: нужно имя и не меньше 6 цифр в телефоне (`phoneOk` в `_lib.js`). Согласие (`f-ok`) проверяется только на клиенте. Форма ручного клиента в `admin.html` и POST в `api/leads.js` проверяют то же самое, но тексты обращаются на «вы».
 - **Имена полей**: в форме radio называется `name="type"`, а textarea — `name="msg"`, но JS отправляет их в API как `topic` и `comment`. В таком же виде они называются в БД.
 - **Часовой пояс** `Europe/Chisinau` используется в `api/lead.js` (Telegram), `api/expenses.js` (текущий месяц) и `admin.html`. В админке дата всегда показывается с часами и минутами, чтобы совпадать с Telegram.

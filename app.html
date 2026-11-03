@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Выдыхай · Запись на консультацию</title>
+<!-- Скрипт Telegram Mini Apps — первым, до остальных скриптов (так требует документация) -->
+<script src="https://telegram.org/js/telegram-web-app.js?64"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Палитра и шрифты — как на сайте (index.html). Тему берём из Telegram (data-theme), иначе из системы. */
+:root{
+  --paper:#ECEEFB; --card:#FFFFFF; --ink:#141224; --muted:#565472; --line:#C9CBE4;
+  --hot:#FF4D2E; --cobalt:#3346FF; --lemon:#FFE040; --mint:#62D9B4; --on-bright:#141224;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"Manrope","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  /* В полноэкранном режиме сверху кнопки Telegram: отступаем на безопасную зону устройства и зону интерфейса Telegram */
+  --top:calc(var(--tg-safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px));
+  --bottom:calc(var(--tg-safe-area-inset-bottom,0px) + var(--tg-content-safe-area-inset-bottom,0px));
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#121120; --card:#1D1B30; --ink:#EFEEFA; --muted:#A9A6C4; --line:#38355A; --hot:#FF6A4D; --cobalt:#6F7EFF; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --paper:#121120; --card:#1D1B30; --ink:#EFEEFA; --muted:#A9A6C4; --line:#38355A; --hot:#FF6A4D; --cobalt:#6F7EFF; color-scheme:dark }
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.5 var(--body);min-height:100vh}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid var(--cobalt);outline-offset:2px;border-radius:8px}
+button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}
+
+.wrap{max-width:560px;margin:0 auto;padding:calc(var(--top) + 20px) max(16px,var(--tg-safe-area-inset-right,0px)) calc(var(--bottom) + 110px) max(16px,var(--tg-safe-area-inset-left,0px))}
+.eyebrow{font:700 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--hot);margin:0 0 10px}
+h1{font:900 28px/1.15 var(--display);margin:0 0 8px;overflow-wrap:anywhere}
+.sub{color:var(--muted);margin:0 0 22px}
+
+.step{background:var(--card);border:3px solid var(--ink);border-radius:18px;box-shadow:4px 4px 0 var(--ink);padding:16px;margin-bottom:18px}
+.step h2{display:flex;align-items:center;gap:10px;font:800 17px/1.3 var(--body);margin:0 0 12px}
+.step h2 b{font:700 12px/1 var(--mono);padding:5px 8px;border:2px solid var(--ink);border-radius:999px;background:var(--lemon);color:var(--on-bright)}
+.hint{color:var(--muted);font-size:14px;margin:10px 0 0}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:700 15px/1 var(--body);padding:13px 18px;border:2px solid var(--ink);border-radius:999px;background:var(--paper);cursor:pointer}
+.chip[aria-pressed="true"],.time[aria-pressed="true"]{background:var(--hot);color:var(--on-bright)}
+
+.days{display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:2px 16px 10px;scroll-snap-type:x proximity;scrollbar-width:none}
+.days::-webkit-scrollbar{display:none}
+.day{flex:none;width:68px;display:grid;justify-items:center;gap:3px;padding:10px 4px;border:2px solid var(--ink);border-radius:14px;background:var(--paper);cursor:pointer;scroll-snap-align:start;font:600 12px/1.2 var(--body)}
+.day b{font:900 20px/1 var(--display)}
+.day[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.day:disabled{opacity:.35;cursor:default}
+
+.times{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.time{font:700 15px/1 var(--mono);padding:13px 0;border:2px solid var(--ink);border-radius:12px;background:var(--paper);cursor:pointer}
+
+label.lbl{display:block;font-weight:700;margin:12px 0 6px}
+input{font:500 16px/1.4 var(--body);width:100%;padding:12px 14px;border:2px solid var(--ink);border-radius:12px;background:var(--paper);color:var(--ink)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:800 15px/1.2 var(--body);padding:13px 18px;border:3px solid var(--ink);border-radius:999px;background:var(--card);color:var(--ink);box-shadow:3px 3px 0 var(--ink);cursor:pointer;text-decoration:none;text-align:center}
+.btn-hot{background:var(--hot);color:var(--on-bright)}
+.btn:disabled{opacity:.6;cursor:default}
+.wide{width:100%}
+.ok{font-weight:700;color:var(--ink);margin:10px 0 0}
+.msg{font-weight:700;padding:12px 14px;border-radius:12px;background:var(--lemon);color:var(--on-bright);border:2px solid var(--ink);margin:0 0 16px}
+
+/* Экраны-заглушки и итог */
+.center{min-height:calc(100vh - var(--top) - var(--bottom) - 140px);display:grid;align-content:center;gap:14px;text-align:center;justify-items:center}
+.big{font-size:56px;line-height:1}
+.card{background:var(--card);border:3px solid var(--ink);border-radius:18px;box-shadow:4px 4px 0 var(--ink);padding:18px;width:100%;text-align:left;display:grid;gap:6px}
+.card b{font:900 18px/1.3 var(--display)}
+.spinner{width:36px;height:36px;border:4px solid var(--line);border-top-color:var(--hot);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation-duration:3s}}
+/* Запасная кнопка — если нативная кнопка Telegram недоступна */
+.fallback{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(var(--bottom) + 12px);background:var(--paper);border-top:2px solid var(--line)}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <!-- Открыто не в Telegram: никаких данных и запросов к серверу -->
+  <section id="outside" class="center" hidden>
+    <div class="big" aria-hidden="true">📱</div>
+    <h1>Откройте приложение в Telegram</h1>
+    <p class="sub">Запись на консультацию работает только внутри Telegram. Найдите бота «Выдыхай заявки» и нажмите кнопку меню «Записаться».</p>
+    <a class="btn btn-hot" id="bot-link" hidden>Открыть бота</a>
+  </section>
+
+  <section id="loading" class="center" hidden>
+    <div class="spinner" role="status" aria-label="Загрузка"></div>
+  </section>
+
+  <section id="form" hidden>
+    <p class="eyebrow">Выдыхай · консультация</p>
+    <h1 id="hello">Привет!</h1>
+    <p class="sub">Выбери тему, день и время — это займёт меньше минуты.</p>
+    <div class="msg" id="msg" role="alert" hidden></div>
+
+    <div class="step">
+      <h2><b>1</b>Тема консультации</h2>
+      <div class="chips" id="topics" role="group" aria-label="Тема консультации"></div>
+    </div>
+
+    <div class="step">
+      <h2><b>2</b>День</h2>
+      <div class="days" id="days" role="group" aria-label="День консультации"></div>
+    </div>
+
+    <div class="step">
+      <h2><b>3</b>Время <span class="hint" style="margin:0;font-weight:600" id="tz-note">по Кишинёву</span></h2>
+      <div class="times" id="times" role="group" aria-label="Время консультации"></div>
+      <p class="hint" id="times-empty" hidden>На этот день свободного времени нет — выбери другой.</p>
+    </div>
+
+    <div class="step">
+      <h2><b>4</b>Телефон <span class="hint" style="margin:0;font-weight:600">необязательно</span></h2>
+      <button class="btn wide" type="button" id="share">Поделиться номером из Telegram</button>
+      <p class="ok" id="phone-ok" role="status" hidden></p>
+      <div id="phone-box">
+        <label class="lbl" for="phone">Или впиши вручную</label>
+        <input id="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="40" placeholder="+373 …">
+      </div>
+      <p class="hint" id="phone-hint">Номер нужен, только если тебе удобнее, чтобы мы позвонили.</p>
+    </div>
+  </section>
+
+  <section id="done" class="center" hidden>
+    <div class="big" aria-hidden="true">✅</div>
+    <h1 id="done-title">Готово!</h1>
+    <div class="card"><span>Ты записан(а) на консультацию</span><b id="done-what"></b></div>
+    <p class="sub">Мы свяжемся с тобой в Telegram, чтобы подтвердить запись.</p>
+    <button class="btn btn-hot" type="button" data-close>Закрыть</button>
+  </section>
+
+  <section id="booked" class="center" hidden>
+    <div class="big" aria-hidden="true">🗓️</div>
+    <h1>У тебя уже есть запись</h1>
+    <div class="card"><span>Консультация</span><b id="booked-what"></b></div>
+    <p class="sub">Чтобы перенести или отменить её, дождись нашего сообщения — мы свяжемся с тобой в Telegram.</p>
+    <button class="btn" type="button" data-close>Закрыть</button>
+  </section>
+
+  <section id="fail" class="center" hidden>
+    <div class="big" aria-hidden="true">😕</div>
+    <h1>Не получилось загрузить</h1>
+    <p class="sub" id="fail-text"></p>
+    <button class="btn btn-hot" type="button" id="retry">Попробовать ещё раз</button>
+  </section>
+</main>
+
+<div class="fallback" id="fallback" hidden>
+  <button class="btn btn-hot wide" type="button" id="submit-fallback">Записаться</button>
+</div>
+
+<script>
+(function(){
+  // username бота (латиница, без «@»), например "vydyhai_bot". Пока пусто — на экране «Откройте в Telegram» нет ссылки.
+  var BOT_USERNAME = "";
+
+  var $ = function(id){ return document.getElementById(id); };
+  var tg = window.Telegram && window.Telegram.WebApp;
+  var SCREENS = ["outside", "loading", "form", "done", "booked", "fail"];
+  function show(id){ SCREENS.forEach(function(s){ $(s).hidden = s !== id; }); }
+
+  // ---------- Открыто не в Telegram: показываем заглушку и ничего не запрашиваем ----------
+  if (!tg || !tg.initData) {
+    show("outside");
+    if (BOT_USERNAME) { $("bot-link").href = "https://t.me/" + BOT_USERNAME; $("bot-link").hidden = false; }
+    return;
+  }
+
+  var can = function(v){ return tg.isVersionAtLeast && tg.isVersionAtLeast(v); };
+  var mobile = tg.platform === "android" || tg.platform === "ios";
+  var user = (tg.initDataUnsafe && tg.initDataUnsafe.user) || {};
+  var state = {topics: [], days: [], topic: null, date: null, time: null, contact: null, busy: false};
+
+  // ---------- Внешний вид: тема Telegram, весь экран ----------
+  function applyTheme(){
+    document.documentElement.setAttribute("data-theme", tg.colorScheme === "dark" ? "dark" : "light");
+    var bg = getComputedStyle(document.documentElement).getPropertyValue("--paper").trim();
+    try { if (can("6.1")) { tg.setHeaderColor(bg); tg.setBackgroundColor(bg); } } catch(e){}
+    try { if (can("7.10")) tg.setBottomBarColor(bg); } catch(e){}
+  }
+  tg.ready();
+  applyTheme();
+  tg.onEvent("themeChanged", applyTheme);
+  tg.expand();
+  // На телефоне — полноэкранный режим (Bot API 8.0+); на компьютере он неудобен, оставляем обычное окно
+  try { if (mobile && can("8.0")) tg.requestFullscreen(); } catch(e){}
+  // Чтобы прокрутка вниз-вверх случайно не закрывала приложение (Bot API 7.7+)
+  try { if (can("7.7")) tg.disableVerticalSwipes(); } catch(e){}
+
+  $("hello").textContent = "Привет, " + (user.first_name || "друг") + "!";
+  if (!user.username) {
+    $("phone-hint").textContent = "У тебя в Telegram нет @username — оставь номер, иначе нам будет сложно с тобой связаться.";
+  }
+
+  // ---------- Запросы к серверу: initData уходит в заголовке, сервер проверяет подпись ----------
+  function api(method, body){
+    return fetch("/api/app", {
+      method: method,
+      headers: {"Content-Type": "application/json", "Authorization": "tma " + tg.initData},
+      body: body ? JSON.stringify(body) : undefined
+    }).catch(function(){
+      throw new Error("Нет связи. Проверь интернет и попробуй ещё раз.");
+    }).then(function(r){
+      return r.json().catch(function(){ return {}; }).then(function(d){
+        if (!r.ok) {
+          var e = new Error(d.error || "Что-то пошло не так. Попробуй ещё раз.");
+          e.refresh = !!d.refresh;
+          throw e;
+        }
+        return d;
+      });
+    });
+  }
+
+  function el(tag, cls, text){ var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  function haptic(type){ try { if (can("6.1")) tg.HapticFeedback.notificationOccurred(type); } catch(e){} }
+  function select(){ try { if (can("6.1")) tg.HapticFeedback.selectionChanged(); } catch(e){} }
+  function msg(text){ $("msg").hidden = !text; $("msg").textContent = text || ""; if (text) $("msg").scrollIntoView({block: "center", behavior: "smooth"}); }
+
+  function dayParts(date){
+    var d = new Date(date + "T00:00:00Z");
+    return {
+      wd: d.toLocaleDateString("ru-RU", {weekday: "short", timeZone: "UTC"}),
+      num: d.getUTCDate(),
+      mon: d.toLocaleDateString("ru-RU", {month: "short", timeZone: "UTC"}).replace(".", ""),
+      long: d.toLocaleDateString("ru-RU", {day: "numeric", month: "long", timeZone: "UTC"})
+    };
+  }
+  function findDay(date){ for (var i = 0; i < state.days.length; i++) if (state.days[i].date === date) return state.days[i]; return null; }
+
+  // ---------- Отрисовка ----------
+  function renderTopics(){
+    var box = $("topics"); box.textContent = "";
+    state.topics.forEach(function(t){
+      var b = el("button", "chip", t); b.type = "button";
+      b.setAttribute("aria-pressed", String(t === state.topic));
+      b.addEventListener("click", function(){ state.topic = t; select(); renderTopics(); update(); });
+      box.appendChild(b);
+    });
+  }
+
+  function renderDays(){
+    var box = $("days"); box.textContent = "";
+    state.days.forEach(function(d){
+      var p = dayParts(d.date);
+      var b = el("button", "day"); b.type = "button";
+      b.appendChild(el("span", null, p.wd));
+      b.appendChild(el("b", null, String(p.num)));
+      b.appendChild(el("span", null, p.mon));
+      b.disabled = !d.slots.length;
+      b.setAttribute("aria-label", p.long + (d.slots.length ? "" : ", нет свободного времени"));
+      b.setAttribute("aria-pressed", String(d.date === state.date));
+      b.addEventListener("click", function(){ state.date = d.date; state.time = null; select(); renderDays(); renderTimes(); update(); });
+      box.appendChild(b);
+    });
+  }
+
+  function renderTimes(){
+    var box = $("times"); box.textContent = "";
+    var day = findDay(state.date);
+    var slots = day ? day.slots : [];
+    $("times-empty").hidden = slots.length > 0;
+    slots.forEach(function(t){
+      var b = el("button", "time", t); b.type = "button";
+      b.setAttribute("aria-pressed", String(t === state.time));
+      b.addEventListener("click", function(){ state.time = t; select(); renderTimes(); update(); });
+      box.appendChild(b);
+    });
+  }
+
+  // Нативная кнопка Telegram внизу появляется, когда выбраны тема, день и время
+  var useMain = !!(tg.MainButton && can("6.0"));
+  function update(){
+    var ready = !!(state.topic && state.date && state.time);
+    var text = ready ? "Записаться: " + dayParts(state.date).long + ", " + state.time : "Записаться";
+    if (useMain) {
+      var hot = getComputedStyle(document.documentElement).getPropertyValue("--hot").trim();
+      tg.MainButton.setParams({text: text, color: hot, text_color: "#141224", is_visible: ready, is_active: ready && !state.busy});
+    } else {
+      $("fallback").hidden = !ready;
+      $("submit-fallback").textContent = text;
+      $("submit-fallback").disabled = state.busy;
+    }
+  }
+
+  // ---------- Загрузка слотов ----------
+  function load(keepMsg){
+    if (!keepMsg) msg("");
+    if ($("form").hidden) show("loading");
+    return api("GET").then(function(d){
+      if (d.booking) {
+        $("booked-what").textContent = (d.booking.topic || "Консультация") + ", " + d.booking.when;
+        if (useMain) tg.MainButton.hide();
+        show("booked");
+        return;
+      }
+      state.topics = d.topics; state.days = d.days;
+      if (state.topic && state.topics.indexOf(state.topic) < 0) state.topic = null;
+      // Выбранный день сохраняем, если в нём ещё есть время; иначе — первый день со свободными слотами
+      var day = findDay(state.date);
+      if (!day || !day.slots.length) {
+        state.date = null;
+        for (var i = 0; i < state.days.length; i++) if (state.days[i].slots.length) { state.date = state.days[i].date; break; }
+      }
+      if (state.time && (!findDay(state.date) || findDay(state.date).slots.indexOf(state.time) < 0)) state.time = null;
+      renderTopics(); renderDays(); renderTimes(); update();
+      show("form");
+    }).catch(function(e){
+      if (!$("form").hidden) { msg(e.message); return; }
+      $("fail-text").textContent = e.message; show("fail");
+    });
+  }
+
+  // ---------- Запись ----------
+  function submit(){
+    if (state.busy || !(state.topic && state.date && state.time)) return;
+    state.busy = true; msg("");
+    if (useMain) tg.MainButton.showProgress(false);
+    update();
+    api("POST", {
+      topic: state.topic, date: state.date, time: state.time,
+      phone: $("phone").value.trim(), contact: state.contact
+    }).then(function(r){
+      haptic("success");
+      if (useMain) tg.MainButton.hide(); else $("fallback").hidden = true;
+      $("done-title").textContent = "Готово, " + (user.first_name || "друг") + "!";
+      $("done-what").textContent = r.topic + ", " + r.when;
+      show("done");
+    }).catch(function(e){
+      haptic("error");
+      msg(e.message);
+      // Слот заняли, время прошло или запись уже есть — обновляем данные с сервера
+      if (e.refresh) load(true);
+    }).then(function(){
+      state.busy = false;
+      if (useMain) tg.MainButton.hideProgress();
+      if (!$("form").hidden) update();
+    });
+  }
+  if (useMain) tg.MainButton.onClick(submit);
+  $("submit-fallback").addEventListener("click", submit);
+
+  // ---------- Телефон через Telegram (Bot API 6.9+) ----------
+  // Telegram присылает подписанную строку с контактом — сервер проверит подпись и что номер именно этого пользователя
+  $("share").addEventListener("click", function(){
+    if (!can("6.9")) { $("phone").focus(); return; }
+    tg.requestContact(function(sent, ev){
+      if (sent && ev && ev.response) {
+        state.contact = ev.response;
+        var c = ev.responseUnsafe && ev.responseUnsafe.contact;
+        var num = c && c.phone_number ? String(c.phone_number) : "";
+        $("phone-ok").textContent = "Номер получен" + (num ? ": " + (num.charAt(0) === "+" ? num : "+" + num) : "") + " ✓";
+        $("phone-ok").hidden = false; $("phone-box").hidden = true; $("share").hidden = true;
+        $("phone").value = "";
+      } else if (sent) {
+        $("phone-ok").textContent = "Номер отправлен в чат, но приложение его не получило — впиши его вручную, если хочешь.";
+        $("phone-ok").hidden = false;
+      } else {
+        $("phone-ok").textContent = "Хорошо, можно и без номера.";
+        $("phone-ok").hidden = false;
+      }
+    });
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-close]"), function(b){
+    b.addEventListener("click", function(){ tg.close(); });
+  });
+  $("retry").addEventListener("click", function(){ load(); });
+
+  load();
+})();
+</script>
+</body>
+</html>

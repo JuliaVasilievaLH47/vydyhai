@@ -64,6 +64,8 @@ textarea{resize:vertical;min-height:80px}
 .card-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font:500 12px/1.4 var(--mono);color:var(--muted)}
 .src{font:700 11px/1 var(--mono);padding:4px 7px;border:2px solid var(--ink);border-radius:999px;color:var(--ink)}
 .src[data-src="Вручную"]{background:var(--lemon);color:var(--on-bright)}
+.src[data-src="Telegram"]{background:var(--mint);color:var(--on-bright)}
+.card-when{font:700 13px/1.3 var(--mono);padding:6px 8px;border:2px dashed var(--ink);border-radius:8px;justify-self:start}
 .stage{font:600 13px/1.2 var(--body);padding:8px;background:var(--card);cursor:pointer}
 
 /* Окна */
@@ -297,6 +299,14 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
   }
   function el(tag, cls, text){ var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
   function tel(phone){ return "tel:" + phone.replace(/[^\d+]/g, ""); }
+  function tgUrl(username){ return "https://t.me/" + encodeURIComponent(username); }
+  // Как связаться: телефон, иначе Telegram (у записей из Mini App телефон необязателен)
+  function contactLink(l, cls){
+    var a;
+    if (l.phone) { a = el("a", cls, l.phone); a.href = tel(l.phone); return a; }
+    if (l.telegram_username) { a = el("a", cls, "@" + l.telegram_username); a.href = tgUrl(l.telegram_username); a.target = "_blank"; a.rel = "noopener"; return a; }
+    return el("span", cls + " muted", "без телефона");
+  }
   function msg(id, text){ $(id).hidden = !text; $(id).textContent = text || ""; }
   function find(id){ for (var i = 0; i < leads.length; i++) if (leads[i].id === id) return leads[i]; return null; }
   function fillStages(sel, value){
@@ -337,7 +347,7 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
 
     var name = el("button", "card-name", l.name); name.type = "button";
     name.addEventListener("click", function(){ openCard(l.id); });
-    var phone = el("a", "card-phone", l.phone); phone.href = tel(l.phone);
+    var phone = contactLink(l, "card-phone");
     var meta = el("div", "card-meta");
     var src = el("span", "src", l.source); src.dataset.src = l.source;
     meta.appendChild(src);
@@ -346,7 +356,9 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
     fillStages(sel, l.status);
     sel.addEventListener("change", function(){ sel.disabled = true; move(l, sel.value); });
 
-    card.appendChild(name); card.appendChild(phone); card.appendChild(meta); card.appendChild(sel);
+    card.appendChild(name); card.appendChild(phone);
+    if (l.consultation_at) card.appendChild(el("div", "card-when", "Консультация: " + fmt(l.consultation_at)));
+    card.appendChild(meta); card.appendChild(sel);
     return card;
   }
 
@@ -389,7 +401,10 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
       if (href) { var a = el("a", null, v); a.href = href; dd.appendChild(a); } else dd.textContent = v;
       info.appendChild(dd);
     }
-    row("Телефон", lead.phone, tel(lead.phone));
+    if (lead.phone) row("Телефон", lead.phone, tel(lead.phone)); else row("Телефон", "не указан");
+    if (lead.telegram_username) row("Telegram", "@" + lead.telegram_username, tgUrl(lead.telegram_username));
+    else if (lead.telegram_id) row("Telegram", "ID " + lead.telegram_id + " (без username)");
+    if (lead.consultation_at) row("Консультация", fmt(lead.consultation_at));
     row("Источник", lead.source);
     row("Создан", fmt(lead.created_at));
     if (lead.age) row("Возраст", String(lead.age));

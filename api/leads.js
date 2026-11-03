@@ -74,6 +74,14 @@ export default async function handler(req, res) {
     res.setHeader("Allow", "GET, POST, PATCH");
     return res.status(405).json({ error: "Метод не поддерживается" });
   } catch (err) {
+    // Уникальные индексы записи на консультацию (migrations/003_telegram.sql), например при возврате из «Отказа»
+    const text = String(err.message);
+    if (text.includes("leads_consultation_slot_uniq")) {
+      return res.status(409).json({ error: "Это время консультации уже занято другим клиентом. Сначала договоритесь о новом времени." });
+    }
+    if (text.includes("leads_telegram_active_uniq")) {
+      return res.status(409).json({ error: "У этого клиента уже есть другая активная запись на консультацию." });
+    }
     console.error(err);
     return res.status(500).json({ error: "Ошибка сервера при работе с клиентами" });
   }

@@ -1,6 +1,5 @@
 -- Полная схема для НОВОЙ установки. Выполнить один раз в Supabase: SQL Editor → New query → вставить → Run.
--- Если таблица leads уже есть (проект работал до CRM), этот файл не нужен —
--- выполните migrations/001_crm.sql.
+-- Если база уже работает, этот файл не нужен — выполните недостающие файлы из migrations/ по порядку.
 
 -- Этапы воронки: этот же список есть в api/_lib.js и admin.html (STATUSES), а также в migrations/001_crm.sql.
 create table if not exists public.leads (
@@ -13,15 +12,30 @@ create table if not exists public.leads (
   comment    text,               -- комментарий посетителя из формы на сайте
   notes      text,               -- заметки админа, редактируются в карточке
   source     text not null default 'Сайт'
-             constraint leads_source_check check (source in ('Сайт', 'Вручную')),
+             constraint leads_source_check check (source in ('Сайт', 'Вручную', 'Telegram')),
   status     text not null default 'Новая'
              constraint leads_status_check check (status in (
                'Новая', 'Связались', 'Записан на консультацию', 'Консультация проведена', 'Отказ'
-             ))
+             )),
+  -- Запись через Telegram Mini App (migrations/003_telegram.sql)
+  telegram_id       bigint,
+  telegram_username text,
+  consultation_at   timestamptz
+                    constraint leads_consultation_hour_check
+                    check (consultation_at is null or date_trunc('hour', consultation_at) = consultation_at)
 );
 
 create index if not exists leads_created_at_idx on public.leads (created_at desc);
 create index if not exists leads_status_idx on public.leads (status);
+
+-- Защита от двойной записи: один слот — одна запись (кроме «Отказа»),
+-- у одного пользователя Telegram — одна запись на этапе «Записан на консультацию»
+create unique index if not exists leads_consultation_slot_uniq
+  on public.leads (consultation_at)
+  where consultation_at is not null and status <> 'Отказ';
+create unique index if not exists leads_telegram_active_uniq
+  on public.leads (telegram_id)
+  where telegram_id is not null and status = 'Записан на консультацию';
 
 -- История этапов: строка при создании заявки и при каждой смене этапа (пишет триггер ниже)
 create table if not exists public.lead_stage_history (

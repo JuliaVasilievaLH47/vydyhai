@@ -134,6 +134,50 @@ export function safeEqual(a, b) {
   return crypto.timingSafeEqual(ha, hb);
 }
 
+// ---------- Telegram Mini App ----------
+
+// Проверка строки, подписанной Telegram (initData или ответ requestContact), по документации
+// https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app :
+//   secret_key = HMAC_SHA256(key = "WebAppData", message = bot_token)
+//   hash       = hex(HMAC_SHA256(key = secret_key, message = data_check_string)),
+//   data_check_string — все поля, кроме hash, по алфавиту, "key=value" через "\n".
+// Возвращает объект полей или null, если подпись неверна или данные старше maxAgeSec.
+export function verifyTelegramData(raw, maxAgeSec = 24 * 3600) {
+  if (typeof raw !== "string" || !raw || raw.length > 8192) return null;
+  const params = new URLSearchParams(raw);
+  const hash = params.get("hash") || "";
+  if (!/^[0-9a-f]{64}$/.test(hash)) return null;
+
+  const pairs = [...params].filter(([k]) => k !== "hash").sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  const secret = crypto.createHmac("sha256", "WebAppData").update(env("TELEGRAM_BOT_TOKEN")).digest();
+  const sign = (list) => crypto.createHmac("sha256", secret).update(list.map(([k, v]) => `${k}=${v}`).join("\n")).digest();
+  const expected = Buffer.from(hash, "hex");
+
+  let ok = crypto.timingSafeEqual(sign(pairs), expected);
+  // Поле signature нужно для другой (Ed25519) проверки; в части описаний его исключают и из hash-проверки.
+  // Принимаем оба варианта — подделать любой из них без токена бота всё равно нельзя.
+  if (!ok && params.has("signature")) ok = crypto.timingSafeEqual(sign(pairs.filter(([k]) => k !== "signature")), expected);
+  if (!ok) return null;
+
+  const age = Date.now() / 1000 - Number(params.get("auth_date"));
+  if (!Number.isFinite(age) || age > maxAgeSec || age < -300) return null;
+  return Object.fromEntries(pairs);
+}
+
+// Пользователь Mini App — только из проверенного initData (заголовок "Authorization: tma <initData>").
+// То, что браузер присылает в теле запроса, для определения пользователя не используется.
+export function telegramUser(req) {
+  const header = req.headers.authorization || "";
+  const data = verifyTelegramData(header.startsWith("tma ") ? header.slice(4) : "");
+  if (!data || !data.user) return null;
+  try {
+    const user = JSON.parse(data.user);
+    return Number.isSafeInteger(user.id) && user.id > 0 ? user : null;
+  } catch {
+    return null;
+  }
+}
+
 // Токен админа: "<время истечения>.<подпись>", подпись делается секретом из SESSION_SECRET
 const sign = (data) => crypto.createHmac("sha256", env("SESSION_SECRET")).update(data).digest("base64url");
 
