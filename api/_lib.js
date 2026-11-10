@@ -3,7 +3,18 @@ import crypto from "node:crypto";
 
 // Этапы воронки. Тот же список — в admin.html и в check-ограничении supabase.sql.
 // Источники («Сайт» / «Вручную») задаются в api/lead.js и api/leads.js, ограничение — в supabase.sql.
-export const STATUSES = ["Новая", "Связались", "Записан на консультацию", "Консультация проведена", "Отказ"];
+export const STATUSES = ["Новая", "Связались", "Записан на консультацию", "Консультация проведена", "Оплачено", "Отказ"];
+// Этап, на который переводит клиента отметка «счёт оплачен» (api/invoices.js)
+export const PAID_STAGE = "Оплачено";
+
+// Реквизиты в счетах (api/_invoice-pdf.js). Проект учебный — все данные вымышленные.
+export const SELLER = {
+  name: "Учебный проект «Выдыхай»",
+  address: "г. Кишинёв, ул. Примерная, 1",
+  idno: "0000000000000",
+  iban: "MD00 XX00 0000 0000 0000 0000",
+  bank: "Учебный банк",
+};
 
 // В телефоне должно быть хотя бы 6 цифр (та же проверка — в формах index.html и admin.html)
 export const phoneOk = (phone) => String(phone).replace(/\D/g, "").length >= 6;
@@ -46,10 +57,13 @@ export async function supabase(path, { method = "GET", body, prefer } = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-// ---------- Supabase Storage: приватный bucket receipts ----------
+// ---------- Supabase Storage: приватные bucket receipts (чеки) и invoices (счета) ----------
+// Последний аргумент — имя bucket, по умолчанию receipts.
 
-export async function storageUpload(path, buffer, type) {
-  const res = await fetch(`${supabaseUrl()}/storage/v1/object/${RECEIPTS_BUCKET}/${path}`, {
+export const INVOICES_BUCKET = "invoices";
+
+export async function storageUpload(path, buffer, type, bucket = RECEIPTS_BUCKET) {
+  const res = await fetch(`${supabaseUrl()}/storage/v1/object/${bucket}/${path}`, {
     method: "POST",
     headers: supabaseHeaders({ "Content-Type": type, "x-upsert": "false" }),
     body: buffer,
@@ -57,8 +71,8 @@ export async function storageUpload(path, buffer, type) {
   if (!res.ok) throw new Error(`Storage upload ${res.status}: ${await res.text()}`);
 }
 
-export async function storageRemove(path) {
-  const res = await fetch(`${supabaseUrl()}/storage/v1/object/${RECEIPTS_BUCKET}`, {
+export async function storageRemove(path, bucket = RECEIPTS_BUCKET) {
+  const res = await fetch(`${supabaseUrl()}/storage/v1/object/${bucket}`, {
     method: "DELETE",
     headers: supabaseHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ prefixes: [path] }),
@@ -67,8 +81,8 @@ export async function storageRemove(path) {
 }
 
 // Временная ссылка на файл (по умолчанию 5 минут)
-export async function storageSignedUrl(path, seconds = 300) {
-  const res = await fetch(`${supabaseUrl()}/storage/v1/object/sign/${RECEIPTS_BUCKET}/${path}`, {
+export async function storageSignedUrl(path, seconds = 300, bucket = RECEIPTS_BUCKET) {
+  const res = await fetch(`${supabaseUrl()}/storage/v1/object/sign/${bucket}/${path}`, {
     method: "POST",
     headers: supabaseHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ expiresIn: seconds }),
@@ -110,6 +124,17 @@ export async function telegram(text) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true }),
   });
+  if (!res.ok) throw new Error(`Telegram ${res.status}: ${await res.text()}`);
+}
+
+// Отправка PDF в Telegram. chatId по умолчанию — чат админа (TELEGRAM_CHAT_ID).
+export async function telegramDocument({ chatId, buffer, filename, caption }) {
+  const token = env("TELEGRAM_BOT_TOKEN");
+  const form = new FormData();
+  form.append("chat_id", String(chatId || env("TELEGRAM_CHAT_ID")));
+  form.append("document", new Blob([buffer], { type: "application/pdf" }), filename);
+  if (caption) { form.append("caption", caption); form.append("parse_mode", "HTML"); }
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendDocument`, { method: "POST", body: form });
   if (!res.ok) throw new Error(`Telegram ${res.status}: ${await res.text()}`);
 }
 
