@@ -11,7 +11,7 @@
 <style>
 :root{
   --paper:#ECEEFB; --card:#FFFFFF; --ink:#141224; --muted:#565472; --line:#C9CBE4;
-  --hot:#FF4D2E; --cobalt:#3346FF; --lemon:#FFE040; --mint:#62D9B4; --on-bright:#141224;
+  --hot:#FF4D2E; --cobalt:#3346FF; --lemon:#FFE040; --mint:#62D9B4; --grape:#9B6BFF; --on-bright:#141224;
   --display:"Unbounded","Arial Black",system-ui,sans-serif;
   --body:"Manrope","Segoe UI",system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
@@ -42,7 +42,7 @@ textarea{resize:vertical;min-height:80px}
 #panel-msg{margin-bottom:16px}
 
 /* Доска: колонки по этапам; на узком экране прокручивается вбок только сама доска */
-.board{display:grid;grid-template-columns:repeat(5,minmax(250px,1fr));gap:14px;overflow-x:auto;padding:4px 4px 14px;scroll-snap-type:x proximity}
+.board{display:grid;grid-template-columns:repeat(6,minmax(230px,1fr));gap:14px;overflow-x:auto;padding:4px 4px 14px;scroll-snap-type:x proximity}
 .col{background:var(--card);border:2px solid var(--ink);border-top-width:8px;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:240px;scroll-snap-align:start}
 .col.over{outline:3px dashed var(--cobalt);outline-offset:3px}
 .col-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:0;font:800 15px/1.25 var(--body)}
@@ -51,6 +51,7 @@ textarea{resize:vertical;min-height:80px}
 [data-stage="Связались"]{border-top-color:var(--lemon)}
 [data-stage="Записан на консультацию"]{border-top-color:var(--cobalt)}
 [data-stage="Консультация проведена"]{border-top-color:var(--mint)}
+[data-stage="Оплачено"]{border-top-color:var(--grape)}
 [data-stage="Отказ"]{border-top-color:var(--muted)}
 .cards{display:grid;gap:10px;align-content:start}
 .empty{padding:18px 10px;text-align:center;color:var(--muted);border:2px dashed var(--line);border-radius:12px;font-size:14px}
@@ -89,6 +90,24 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
 .history span{font-weight:700}
 .history small{display:block;color:var(--muted)}
 @media (max-width:480px){.info{grid-template-columns:1fr;gap:0}.info dd{margin-bottom:8px}}
+
+/* Счета в карточке клиента */
+.invs{display:grid;gap:8px}
+.inv{border:2px solid var(--ink);border-radius:12px;padding:10px 12px;display:grid;gap:8px;background:var(--paper)}
+.inv-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.inv-top b{font:800 15px/1.3 var(--body)}
+.inv-sum{font:700 14px/1.3 var(--mono)}
+.inv-status{font:700 11px/1 var(--mono);padding:4px 7px;border:2px solid var(--ink);border-radius:999px;background:var(--lemon);color:var(--on-bright)}
+.inv-status[data-paid]{background:var(--mint)}
+.inv-meta{font:500 12px/1.4 var(--mono);color:var(--muted)}
+/* Окно «Выставить счёт» */
+.items{display:grid;gap:8px}
+.item{display:grid;grid-template-columns:minmax(0,1fr) 70px 110px 40px;gap:8px;align-items:center}
+.item-head{font:700 12px/1.2 var(--body);color:var(--muted)}
+.item .x{width:36px;height:36px;font-size:18px}
+.inv-total{font:800 17px/1.3 var(--body);text-align:right}
+/* На телефоне название — на всю строку, под ним количество, цена и «×» */
+@media (max-width:480px){.item{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) 36px;gap:6px}.item .i-title{grid-column:1/-1}.item-head{display:none}.items{gap:14px}}
 
 /* Вкладки */
 .tabs{display:flex;flex-wrap:wrap;gap:8px}
@@ -232,10 +251,32 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
         <button class="btn" type="button" id="d-save">Сохранить заметки</button>
         <span class="saved" id="d-saved" role="status"></span>
       </div>
+      <h3>Счета</h3>
+      <div class="invs" id="d-invoices"></div>
+      <div class="row"><button class="btn btn-sm" type="button" id="d-invoice">Выставить счёт</button></div>
       <h3>История этапов</h3>
       <ol class="history" id="d-history"></ol>
     </div>
   </div>
+</dialog>
+
+<!-- Новый счёт -->
+<dialog id="inv-dlg" aria-labelledby="i-title">
+  <form class="dlg" id="inv-form" novalidate>
+    <div class="dlg-head">
+      <h2 id="i-title">Новый счёт</h2>
+      <button class="x" type="button" data-close aria-label="Закрыть">×</button>
+    </div>
+    <div class="item item-head" aria-hidden="true"><span>Позиция</span><span>Кол-во</span><span>Цена, MDL</span><span></span></div>
+    <div class="items" id="i-items"></div>
+    <div class="row"><button class="btn btn-sm" type="button" id="i-add">+ Позиция</button></div>
+    <label class="lbl" for="i-due">Оплатить до</label>
+    <input id="i-due" type="date">
+    <div class="inv-total" id="i-total" aria-live="polite"></div>
+    <p class="muted" id="i-where" style="margin:0"></p>
+    <div class="msg" id="i-msg" role="alert" hidden></div>
+    <div class="row"><button class="btn btn-hot" type="submit" id="i-save">Выставить счёт</button></div>
+  </form>
 </dialog>
 
 <!-- Новый клиент -->
@@ -259,13 +300,13 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
 <script>
 (function(){
   // Этапы воронки. Тот же список — в api/_lib.js и в check-ограничении supabase.sql
-  var STATUSES = ["Новая", "Связались", "Записан на консультацию", "Консультация проведена", "Отказ"];
+  var STATUSES = ["Новая", "Связались", "Записан на консультацию", "Консультация проведена", "Оплачено", "Отказ"];
   var $ = function(id){ return document.getElementById(id); };
   var token = null, leads = [], current = null; // current — id клиента в открытой карточке
   try { token = sessionStorage.getItem("vydyhai_token"); } catch(e){}
 
   function saveToken(t){ token = t; try { t ? sessionStorage.setItem("vydyhai_token", t) : sessionStorage.removeItem("vydyhai_token"); } catch(e){} }
-  function closeDialogs(){ ["card-dlg", "add-dlg", "exp-dlg"].forEach(function(id){ if ($(id).open) $(id).close(); }); }
+  function closeDialogs(){ ["inv-dlg", "card-dlg", "add-dlg", "exp-dlg"].forEach(function(id){ if ($(id).open) $(id).close(); }); }
   function showLogin(text){
     saveToken(null); closeDialogs();
     $("panel").hidden = true; $("login").hidden = false;
@@ -385,9 +426,11 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
 
   // withNotes = false — не трогать заметки, чтобы не стереть несохранённый текст при смене этапа
   function loadCard(id, withNotes){
-    return api("/api/leads?id=" + id).then(function(lead){
+    return Promise.all([api("/api/leads?id=" + id), api("/api/invoices?lead_id=" + id)]).then(function(r){
       if (current !== id) return;
-      renderDetail(lead, withNotes);
+      currentLead = r[0];
+      renderDetail(r[0], withNotes);
+      renderInvoices(r[1]);
       $("d-content").hidden = false;
     });
   }
@@ -443,7 +486,128 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
       .then(function(){ btn.disabled = false; });
   });
 
-  $("card-dlg").addEventListener("close", function(){ current = null; });
+  $("card-dlg").addEventListener("close", function(){ current = null; currentLead = null; });
+
+  // ---------- Счета ----------
+  var currentLead = null; // клиент в открытой карточке — для окна «Выставить счёт»
+  function cents(v){ // "250,50" → 25050; null, если цена неверная (та же проверка — toCents в api/invoices.js)
+    var s = String(v).replace(/\s/g, "").replace(",", ".");
+    if (!/^\d+(\.\d{1,2})?$/.test(s)) return null;
+    var p = s.split("."), c = Number(p[0]) * 100 + Number(((p[1] || "") + "00").slice(0, 2));
+    return c > 0 ? c : null;
+  }
+  function fmtCents(c){ return money(c / 100, "MDL"); }
+
+  function renderInvoices(list){
+    var box = $("d-invoices"); box.textContent = "";
+    if (!list.length) { box.appendChild(el("div", "muted", "Счетов пока нет")); return; }
+    list.forEach(function(inv){
+      var row = el("div", "inv"), top = el("div", "inv-top");
+      var paid = inv.status === "Оплачен";
+      top.appendChild(el("b", null, "№ " + inv.id));
+      top.appendChild(el("span", "inv-sum", fmtCents(inv.total_cents)));
+      var st = el("span", "inv-status", inv.status); if (paid) st.setAttribute("data-paid", "");
+      top.appendChild(st);
+      row.appendChild(top);
+      row.appendChild(el("div", "inv-meta",
+        "от " + fmtDate(inv.issued_on) + " · " + (paid ? "оплачен " + fmt(inv.paid_at) : "оплатить до " + fmtDate(inv.due_on)) +
+        " · " + (inv.sent_to_client ? "клиенту отправлен в Telegram" : "клиенту не отправлен")));
+      var acts = el("div", "row");
+      var pdf = el("button", "btn btn-sm", "Открыть PDF"); pdf.type = "button";
+      pdf.addEventListener("click", function(){ openPdf(inv.id, pdf); });
+      acts.appendChild(pdf);
+      if (!paid) {
+        var pay = el("button", "btn btn-sm", "Отметить оплату"); pay.type = "button";
+        pay.addEventListener("click", function(){ markPaid(inv, pay); });
+        acts.appendChild(pay);
+      }
+      row.appendChild(acts);
+      box.appendChild(row);
+    });
+  }
+
+  function openPdf(id, btn){
+    // Окно открываем сразу по клику, иначе браузер заблокирует его как всплывающее
+    var w = window.open("", "_blank"); btn.disabled = true; msg("d-msg", "");
+    api("/api/invoices?id=" + id)
+      .then(function(r){ if (w) w.location = r.url; else location.href = r.url; })
+      .catch(function(e){ if (w) w.close(); if (e.message !== "unauthorized") msg("d-msg", e.message); })
+      .then(function(){ btn.disabled = false; });
+  }
+
+  function markPaid(inv, btn){
+    if (!confirm("Отметить счёт № " + inv.id + " оплаченным? Клиент перейдёт на этап «Оплачено». Отменить это нельзя.")) return;
+    var id = current; btn.disabled = true; msg("d-msg", "");
+    api("/api/invoices", {method:"PATCH", body: JSON.stringify({id:inv.id, paid:true})})
+      .then(function(){ load(); if (current === id) return loadCard(id, false); })
+      .catch(function(e){ if (e.message !== "unauthorized") msg("d-msg", e.message); btn.disabled = false; });
+  }
+
+  function addItem(title, qty, price){
+    var row = el("div", "item");
+    var t = el("input"); t.maxLength = 120; t.value = title || ""; t.setAttribute("aria-label", "Название позиции"); t.className = "i-title";
+    var q = el("input"); q.type = "number"; q.min = "1"; q.max = "1000"; q.step = "1"; q.value = qty || "1"; q.setAttribute("aria-label", "Количество"); q.className = "i-qty";
+    var p = el("input"); p.inputMode = "decimal"; p.value = price || ""; p.placeholder = "Цена, MDL"; p.setAttribute("aria-label", "Цена, MDL"); p.className = "i-price";
+    var x = el("button", "x", "×"); x.type = "button"; x.setAttribute("aria-label", "Удалить позицию");
+    x.addEventListener("click", function(){ if ($("i-items").children.length > 1) { row.remove(); invTotal(); } });
+    [t, q, p].forEach(function(i){ i.addEventListener("input", invTotal); });
+    row.appendChild(t); row.appendChild(q); row.appendChild(p); row.appendChild(x);
+    $("i-items").appendChild(row);
+    $("i-add").disabled = $("i-items").children.length >= 10;
+    return t;
+  }
+
+  // Позиции из формы; error — текст первой ошибки (те же тексты — readItems в api/invoices.js)
+  function readItems(){
+    var items = [], error = "", total = 0;
+    Array.prototype.forEach.call($("i-items").children, function(row, i){
+      var title = row.querySelector(".i-title").value.trim(), qty = Number(row.querySelector(".i-qty").value);
+      var price = row.querySelector(".i-price").value, c = cents(price), n = i + 1;
+      if (!error) {
+        if (!title) error = "Позиция " + n + ": укажите название.";
+        else if (!(qty >= 1 && qty <= 1000 && qty % 1 === 0)) error = "Позиция " + n + ": количество — целое число от 1 до 1000.";
+        else if (c === null) error = "Позиция " + n + ": цена — число больше нуля, например 500 или 250,50.";
+      }
+      if (c !== null && qty >= 1 && qty % 1 === 0) total += c * qty;
+      items.push({title:title, qty:qty, price:price});
+    });
+    return {items:items, error:error, total:total};
+  }
+  function invTotal(){ $("i-total").textContent = "Итого: " + fmtCents(readItems().total); $("i-add").disabled = $("i-items").children.length >= 10; }
+
+  $("d-invoice").addEventListener("click", function(){
+    if (!currentLead) return;
+    $("i-title").textContent = "Счёт для " + currentLead.name;
+    $("i-items").textContent = ""; msg("i-msg", "");
+    var first = addItem("Консультация", 1, "");
+    var today = chisinauToday();
+    $("i-due").min = today;
+    $("i-due").value = new Date(Date.parse(today + "T00:00:00Z") + 7 * 86400000).toISOString().slice(0, 10);
+    $("i-where").textContent = currentLead.telegram_id
+      ? "PDF уйдёт клиенту в Telegram."
+      : "У клиента нет Telegram — PDF придёт вам в чат, отправьте его клиенту сами.";
+    invTotal();
+    $("inv-dlg").showModal(); first.focus(); first.select();
+  });
+  $("i-add").addEventListener("click", function(){ addItem("", 1, "").focus(); invTotal(); });
+
+  $("inv-form").addEventListener("submit", function(e){
+    e.preventDefault();
+    var r = readItems();
+    if (r.error) { msg("i-msg", r.error); return; }
+    if (!$("i-due").value) { msg("i-msg", "Укажите, до какого числа оплатить."); return; }
+    var id = current, btn = $("i-save"); btn.disabled = true; msg("i-msg", "");
+    api("/api/invoices", {method:"POST", body: JSON.stringify({lead_id:id, items:r.items, due_on:$("i-due").value})})
+      .then(function(inv){
+        $("inv-dlg").close();
+        if (current === id) {
+          $("d-saved").textContent = "Счёт № " + inv.id + (inv.sent_to_client ? " отправлен клиенту" : " создан, PDF — в вашем чате");
+          return loadCard(id, false);
+        }
+      })
+      .catch(function(e){ if (e.message !== "unauthorized") msg("i-msg", e.message); })
+      .then(function(){ btn.disabled = false; });
+  });
 
   // ---------- Новый клиент ----------
   $("add").addEventListener("click", function(){

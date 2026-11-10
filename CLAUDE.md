@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Сборка и запуск
 
-- Сборки, линтера, тестов и npm-зависимостей нет. `package.json` нужен только для `"type": "module"`, чтобы `api/*.js` работали как ES-модули.
+- Сборки, линтера и тестов нет. `package.json` задаёт `"type": "module"` (чтобы `api/*.js` работали как ES-модули) и две зависимости для PDF счетов: `pdf-lib` и `@pdf-lib/fontkit`. Vercel ставит их сам при деплое. `node_modules` в `.gitignore`, `package-lock.json` коммитится. Локально: `npm install`.
 - На Vercel выбран Framework Preset **Other**. HTML отдаётся как статика, `api/*.js` работают как serverless-функции Node (`export default handler(req, res)`). `fetch` и `node:crypto` встроенные.
 - Без переменных окружения API не работает: `env()` в `_lib.js` бросает ошибку. Нужны семь переменных: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `GEMINI_API_KEY`. Настоящие значения задаются только в настройках Vercel. В `.env.example` хранится лишь образец без значений.
 - Полная схема БД для новой установки лежит в `supabase.sql`. Изменения для уже работающей базы лежат в `migrations/NNN_*.sql`. И то и другое выполняют вручную в Supabase SQL Editor, причём миграцию — до загрузки кода, который на неё опирается. Меняя схему, обновляйте оба файла.
@@ -57,12 +57,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Оригиналы лежат в приватном bucket `receipts` по пути `ГГГГ-ММ/<uuid>.<ext>`. Политик на `storage.objects` нет. Ссылка на файл создаётся через `storageSignedUrl()` и живёт 5 минут.
 - Итоги месяца считаются в `api/expenses.js` в целых копейках и отдельно по каждой валюте. Месяц определяется по дате чека (`expense_date`), а не по `created_at`.
 
+### Счета (`api/invoices.js`, `api/_invoice-pdf.js`)
+- Номер счёта = `id` в таблице `invoices`. Позиции хранятся в `items` (jsonb `[{title, qty, price_cents}]`), суммы — в целых копейках, валюта MDL.
+- Порядок при создании: строка в БД (даёт номер) → PDF → загрузка в приватный bucket `invoices` по пути `ГГГГ-ММ/<id>.pdf` → `file_path`. Если PDF или загрузка не удались, строка и файл удаляются.
+- PDF уходит клиенту через `sendDocument` на `telegram_id` (есть только у клиентов из Mini App). Нет `telegram_id` или Telegram ответил ошибкой — PDF уходит админу в `TELEGRAM_CHAT_ID` с пометкой «Клиенту не отправлен». Флаг `sent_to_client` показывает, дошёл ли счёт до клиента.
+- Отметка оплаты (PATCH) необратима: счёт → «Оплачен», клиент → `PAID_STAGE` («Оплачено»), в историю этапов пишется пометка «Оплачен счёт № N» (так же, как «MCP» в `api/mcp.js`).
+- Шрифты `api/_fonts/Manrope-*.ttf` (статические, из Google Fonts) попадают в функцию через `includeFiles` в `vercel.json`. Без них PDF не соберётся.
+- Реквизиты продавца — `SELLER` в `_lib.js`, все вымышленные.
+
 ## Что держать синхронным между файлами
 
-- **Этапы воронки** `Новая` / `Связались` / `Записан на консультацию` / `Консультация проведена` / `Отказ` записаны в трёх местах: `STATUSES` в `api/_lib.js`, `STATUSES` в `admin.html` и `check`-ограничение `leads_status_check` в `supabase.sql`. В CSS `admin.html` у каждого этапа есть свой цвет через `[data-stage="…"]`. Новый этап добавляется отдельной миграцией.
+- **Этапы воронки** `Новая` / `Связались` / `Записан на консультацию` / `Консультация проведена` / `Оплачено` / `Отказ` записаны в трёх местах: `STATUSES` в `api/_lib.js`, `STATUSES` в `admin.html` и `check`-ограничение `leads_status_check` в `supabase.sql`. В CSS `admin.html` у каждого этапа есть свой цвет через `[data-stage="…"]`. Новый этап добавляется отдельной миграцией.
 - **Категории расходов** `Реклама` / `Печать материалов` / `Консультанты` / `Сервисы и подписки` / `Прочее` записаны в `CATEGORIES` в `api/_lib.js` (оттуда же берётся `enum` в JSON-схеме для Gemini), в `CATEGORIES` в `admin.html` и в `expenses_category_check` в `supabase.sql`. Если меняете категории, поправьте и описание категорий в `PROMPT` в `api/expense-scan.js`, а для работающей базы напишите миграцию.
 - **Типы и размер файлов чеков**: `FILE_TYPES` и `MAX_FILE_BYTES` в `_lib.js`, `MAX_FILE` в `admin.html`, `expenses_file_type_check` и настройки bucket (`file_size_limit`, `allowed_mime_types`) в SQL.
-- **Источники** `Сайт` / `Вручную` / `Telegram` задаются в `api/lead.js`, `api/leads.js` и `api/app.js`, а ограничение на них — `leads_source_check`. У бейджа источника в `admin.html` свой цвет через `.src[data-src="…"]`.
+- **Проверка позиций счёта** (название, количество 1–1000, цена вида `500` или `250,50`) продублирована в `admin.html` (`readItems`, `cents`) и `api/invoices.js` (`readItems`, `toCents`) с одинаковыми текстами ошибок.
+- **Источники** `Сайт` / `Вручную` / `Telegram` (в ограничении БД уже есть и `Голос` для голосового агента) задаются в `api/lead.js`, `api/leads.js` и `api/app.js`, а ограничение на них — `leads_source_check`. У бейджа источника в `admin.html` свой цвет через `.src[data-src="…"]`.
 - **Темы консультаций** в Mini App (`TOPICS` в `api/app.js`) повторяют radio `name="type"` формы в `index.html`, кроме «Просто перезвонить».
 - **Валидация формы** продублирована в `index.html` и `api/lead.js` с одинаковыми текстами ошибок: нужно имя и не меньше 6 цифр в телефоне (`phoneOk` в `_lib.js`). Согласие (`f-ok`) проверяется только на клиенте. Форма ручного клиента в `admin.html` и POST в `api/leads.js` проверяют то же самое, но тексты обращаются на «вы».
 - **Имена полей**: в форме radio называется `name="type"`, а textarea — `name="msg"`, но JS отправляет их в API как `topic` и `comment`. В таком же виде они называются в БД.

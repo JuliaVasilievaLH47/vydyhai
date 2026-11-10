@@ -2,6 +2,7 @@
   "cleanUrls": true,
   "functions": {
     "api/expense-scan.js": { "maxDuration": 60 },
-    "api/expenses.js": { "maxDuration": 30 }
+    "api/expenses.js": { "maxDuration": 30 },
+    "api/invoices.js": { "maxDuration": 30, "includeFiles": "api/_fonts/**" }
   }
 }

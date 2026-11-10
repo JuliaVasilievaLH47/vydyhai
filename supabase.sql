@@ -12,10 +12,10 @@ create table if not exists public.leads (
   comment    text,               -- комментарий посетителя из формы на сайте
   notes      text,               -- заметки админа, редактируются в карточке
   source     text not null default 'Сайт'
-             constraint leads_source_check check (source in ('Сайт', 'Вручную', 'Telegram')),
+             constraint leads_source_check check (source in ('Сайт', 'Вручную', 'Telegram', 'Голос')),
   status     text not null default 'Новая'
              constraint leads_status_check check (status in (
-               'Новая', 'Связались', 'Записан на консультацию', 'Консультация проведена', 'Отказ'
+               'Новая', 'Связались', 'Записан на консультацию', 'Консультация проведена', 'Оплачено', 'Отказ'
              )),
   -- Запись через Telegram Mini App (migrations/003_telegram.sql)
   telegram_id       bigint,
@@ -103,6 +103,40 @@ alter table public.expenses enable row level security;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('receipts', 'receipts', false, 5242880,
         array['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
+on conflict (id) do update
+  set public             = false,
+      file_size_limit    = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
+
+-- ---------- Счета (то же, что migrations/004_invoices.sql) ----------
+-- Номер счёта = id. items — позиции [{title, qty, price_cents}], суммы в целых копейках.
+create table if not exists public.invoices (
+  id             bigint generated always as identity primary key,
+  created_at     timestamptz not null default now(),
+  lead_id        bigint not null references public.leads (id) on delete restrict,
+  issued_on      date not null,
+  due_on         date not null,
+  currency       text not null default 'MDL'
+                 constraint invoices_currency_check check (currency ~ '^[A-Z]{3}$'),
+  items          jsonb not null
+                 constraint invoices_items_check
+                 check (jsonb_typeof(items) = 'array' and jsonb_array_length(items) between 1 and 10),
+  total_cents    bigint not null
+                 constraint invoices_total_check check (total_cents > 0),
+  status         text not null default 'Не оплачен'
+                 constraint invoices_status_check check (status in ('Не оплачен', 'Оплачен')),
+  paid_at        timestamptz,
+  file_path      text,                            -- путь PDF в bucket invoices
+  sent_to_client boolean not null default false,  -- PDF ушёл клиенту в Telegram
+  constraint invoices_due_check check (due_on >= issued_on),
+  constraint invoices_paid_check check ((status = 'Оплачен') = (paid_at is not null))
+);
+
+create index if not exists invoices_lead_idx on public.invoices (lead_id, id desc);
+alter table public.invoices enable row level security;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('invoices', 'invoices', false, 2097152, array['application/pdf'])
 on conflict (id) do update
   set public             = false,
       file_size_limit    = excluded.file_size_limit,
