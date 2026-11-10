@@ -344,7 +344,7 @@ footer .wrap{display:grid;gap:20px}
     </div>
   </section>
 
-  <section style="padding-top:0">
+  <section id="brain" style="padding-top:0">
     <div class="wrap">
       <div class="head">
         <span class="eyebrow">Мозг</span>
@@ -443,7 +443,7 @@ footer .wrap{display:grid;gap:20px}
     </div>
   </section>
 
-  <section style="padding-top:0">
+  <section id="memes" style="padding-top:0">
     <div class="wrap">
       <div class="head">
         <span class="eyebrow">Мемы</span>
@@ -496,7 +496,7 @@ footer .wrap{display:grid;gap:20px}
     </div>
   </section>
 
-  <section class="quit">
+  <section id="quit" class="quit">
     <div class="wrap">
       <div class="head">
         <span class="eyebrow">Хорошие новости</span>
@@ -695,6 +695,42 @@ footer .wrap{display:grid;gap:20px}
         show("err", msg);
       })
       .then(function(){ btn.disabled = false; btn.textContent = "Отправить заявку"; });
+  });
+})();
+</script>
+
+<!-- Голосовой агент ElevenLabs: кнопка «Поговорить». Настройки агента — scripts/voice-agent.mjs -->
+<elevenlabs-convai agent-id="agent_4101m73mjf9mej8rph1bxw6kdn85"></elevenlabs-convai>
+<script src="https://unpkg.com/@elevenlabs/convai-widget-embed@0.21.6" async type="text/javascript"></script>
+<script>
+(function(){
+  // Разделы, которые агент умеет показывать (инструмент show_section). Тот же список — в scripts/voice-agent.mjs.
+  var SECTIONS = {
+    top: "начало страницы",
+    inside: "«Что внутри» — состав вейпа и сигареты",
+    brain: "«Мозг» — как никотин влияет на мозг подростка",
+    timeline: "«Машина времени» — что будет через 1, 5 и 10 лет",
+    look: "«Внешность» — кожа, зубы, волосы",
+    memes: "«Мемы»",
+    myths: "«Мифы и факты»",
+    quit: "«Хорошие новости» — как тело восстанавливается после отказа",
+    help: "«Помощь» — телефоны и запись к врачу или психологу"
+  };
+  var widget = document.querySelector("elevenlabs-convai");
+  if(!widget) return;
+  widget.addEventListener("elevenlabs-convai:call", function(event){
+    event.detail.config.clientTools = {
+      show_section: function(params){
+        var id = params && params.section;
+        var el = SECTIONS.hasOwnProperty(id) && document.getElementById(id);
+        if(!el) return "Такого раздела на сайте нет. Ничего не открыто. Скажи об этом посетителю и предложи существующие разделы.";
+        // Прокрутка без перезагрузки страницы, поэтому разговор не прерывается. Учитываем липкую шапку.
+        var header = document.querySelector(".top");
+        var y = el.getBoundingClientRect().top + window.pageYOffset - (header ? header.offsetHeight : 0) - 8;
+        window.scrollTo(0, Math.max(0, y));
+        return "Показываю раздел " + SECTIONS[id] + ". Скажи посетителю, что сейчас на экране, и продолжай разговор.";
+      }
+    };
   });
 })();
 </script>

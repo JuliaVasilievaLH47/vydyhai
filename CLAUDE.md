@@ -10,14 +10,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Сборки, линтера и тестов нет. `package.json` задаёт `"type": "module"` (чтобы `api/*.js` работали как ES-модули) и две зависимости для PDF счетов: `pdf-lib` и `@pdf-lib/fontkit`. Vercel ставит их сам при деплое. `node_modules` в `.gitignore`, `package-lock.json` коммитится. Локально: `npm install`.
 - На Vercel выбран Framework Preset **Other**. HTML отдаётся как статика, `api/*.js` работают как serverless-функции Node (`export default handler(req, res)`). `fetch` и `node:crypto` встроенные.
-- Без переменных окружения API не работает: `env()` в `_lib.js` бросает ошибку. Нужны семь переменных: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `GEMINI_API_KEY`. Настоящие значения задаются только в настройках Vercel. В `.env.example` хранится лишь образец без значений.
+- Без переменных окружения API не работает: `env()` в `_lib.js` бросает ошибку. Нужны семь переменных: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `GEMINI_API_KEY`. Для MCP-сервера ещё `MCP_TOKEN`, для голосового агента — `VOICE_SECRET`. `ELEVENLABS_API_KEY` нужен только локально для `scripts/voice-agent.mjs`, в Vercel его нет. Настоящие значения задаются только в настройках Vercel. В `.env.example` хранится лишь образец без значений.
 - Полная схема БД для новой установки лежит в `supabase.sql`. Изменения для уже работающей базы лежат в `migrations/NNN_*.sql`. И то и другое выполняют вручную в Supabase SQL Editor, причём миграцию — до загрузки кода, который на неё опирается. Меняя схему, обновляйте оба файла.
 - Это git-репозиторий, связанный с GitHub (`origin/main`). Push на `main` сразу запускает деплой на Vercel, поэтому push делается только после подтверждения пользователя и после того, как он выполнит нужную миграцию.
 - В `vercel.json` для функций `api/expense-scan.js` и `api/expenses.js` увеличен `maxDuration`, потому что распознавание идёт дольше стандартных 10 секунд.
 
 ## Архитектура
 
-- `index.html` и `admin.html` — самодостаточные страницы, в которых CSS и JS встроены inline. JS написан на vanilla в стиле ES5 (`var`, `function`), фреймворков нет. Из внешних ресурсов подключены только Google Fonts.
+- `index.html` и `admin.html` — самодостаточные страницы, в которых CSS и JS встроены inline. JS написан на vanilla в стиле ES5 (`var`, `function`), фреймворков нет. Из внешних ресурсов подключены Google Fonts и в `index.html` виджет ElevenLabs (`@elevenlabs/convai-widget-embed` с unpkg, версия закреплена).
 - В `vercel.json` включён `cleanUrls`, поэтому админка открывается по адресу `/admin`.
 - `api/_lib.js` содержит общие помощники. Файлы с `_` в начале имени Vercel не публикует как маршруты.
   - Supabase вызывается напрямую через REST (`/rest/v1/…`), SDK нет. Ключ `sb_secret_…` передаётся только в `apikey`, а старый JWT service_role — ещё и в `Authorization: Bearer`.
@@ -65,13 +65,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Шрифты `api/_fonts/Manrope-*.ttf` (статические, из Google Fonts) попадают в функцию через `includeFiles` в `vercel.json`. Без них PDF не соберётся.
 - Реквизиты продавца — `SELLER` в `_lib.js`, все вымышленные.
 
+### Голосовой агент (ElevenLabs Agents, `api/voice-lead.js`)
+- Агент, его промпт, лимиты и инструменты задаются кодом в `scripts/voice-agent.mjs` (запуск `node scripts/voice-agent.mjs`, нужен `ELEVENLABS_API_KEY` в `.env`). В кабинете ElevenLabs настройки не правьте: следующий запуск скрипта их перезапишет. ID агента, инструментов и секрета лежат в `scripts/voice-agent.ids.json`. Папка `scripts` не публикуется (`.vercelignore`).
+- `show_section` — client tool. Его обработчик в конце `index.html` прокручивает страницу к `#id` без перезагрузки, поэтому разговор не прерывается. Неизвестный раздел возвращает агенту текст «такого раздела нет» и ничего не прокручивает.
+- `create_lead` — webhook tool. ElevenLabs шлёт POST на `/api/voice-lead` с заголовком `X-Voice-Secret`, значение хранится в сейфе ElevenLabs (workspace secret). Без верного секрета ответ 401. Заявка сохраняется с `source: "Голос"`, этап «Новая», краткое содержание разговора — в `comment`. Ошибки проверки (нет согласия, имени, 6 цифр в телефоне) возвращаются кодом 200 с `ok: false`, чтобы агент прочитал текст и переспросил.
+- Лимиты: разговор до 180 с, не больше 10 разговоров в сутки и 2 одновременно, виджет работает только на `vydyhai.vercel.app` и `localhost`. Тариф Free без карты, сверх 15 минут в месяц деньги не списываются.
+
 ## Что держать синхронным между файлами
 
 - **Этапы воронки** `Новая` / `Связались` / `Записан на консультацию` / `Консультация проведена` / `Оплачено` / `Отказ` записаны в трёх местах: `STATUSES` в `api/_lib.js`, `STATUSES` в `admin.html` и `check`-ограничение `leads_status_check` в `supabase.sql`. В CSS `admin.html` у каждого этапа есть свой цвет через `[data-stage="…"]`. Новый этап добавляется отдельной миграцией.
 - **Категории расходов** `Реклама` / `Печать материалов` / `Консультанты` / `Сервисы и подписки` / `Прочее` записаны в `CATEGORIES` в `api/_lib.js` (оттуда же берётся `enum` в JSON-схеме для Gemini), в `CATEGORIES` в `admin.html` и в `expenses_category_check` в `supabase.sql`. Если меняете категории, поправьте и описание категорий в `PROMPT` в `api/expense-scan.js`, а для работающей базы напишите миграцию.
 - **Типы и размер файлов чеков**: `FILE_TYPES` и `MAX_FILE_BYTES` в `_lib.js`, `MAX_FILE` в `admin.html`, `expenses_file_type_check` и настройки bucket (`file_size_limit`, `allowed_mime_types`) в SQL.
 - **Проверка позиций счёта** (название, количество 1–1000, цена вида `500` или `250,50`) продублирована в `admin.html` (`readItems`, `cents`) и `api/invoices.js` (`readItems`, `toCents`) с одинаковыми текстами ошибок.
-- **Источники** `Сайт` / `Вручную` / `Telegram` (в ограничении БД уже есть и `Голос` для голосового агента) задаются в `api/lead.js`, `api/leads.js` и `api/app.js`, а ограничение на них — `leads_source_check`. У бейджа источника в `admin.html` свой цвет через `.src[data-src="…"]`.
+- **Разделы для голосового агента**: `SECTIONS` в `index.html` и `SECTIONS` в `scripts/voice-agent.mjs` совпадают с `id` секций страницы. Изменили раздел — перезапустите скрипт.
+- **Источники** `Сайт` / `Вручную` / `Telegram` / `Голос` задаются в `api/lead.js`, `api/leads.js`, `api/app.js` и `api/voice-lead.js`, а ограничение на них — `leads_source_check`. У бейджа источника в `admin.html` свой цвет через `.src[data-src="…"]`.
 - **Темы консультаций** в Mini App (`TOPICS` в `api/app.js`) повторяют radio `name="type"` формы в `index.html`, кроме «Просто перезвонить».
 - **Валидация формы** продублирована в `index.html` и `api/lead.js` с одинаковыми текстами ошибок: нужно имя и не меньше 6 цифр в телефоне (`phoneOk` в `_lib.js`). Согласие (`f-ok`) проверяется только на клиенте. Форма ручного клиента в `admin.html` и POST в `api/leads.js` проверяют то же самое, но тексты обращаются на «вы».
 - **Имена полей**: в форме radio называется `name="type"`, а textarea — `name="msg"`, но JS отправляет их в API как `topic` и `comment`. В таком же виде они называются в БД.
