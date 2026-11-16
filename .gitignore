@@ -3,3 +3,8 @@
 !.env.example
 .vercel
 node_modules
+
+# Отчёты об аудите безопасности: описывают уязвимости, в git и на сайт не попадают
+security audit*.md
+security-audit*.md
+audits/
