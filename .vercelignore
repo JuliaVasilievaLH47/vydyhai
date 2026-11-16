@@ -3,3 +3,4 @@ scripts
 security audit*.md
 security-audit*.md
 audits/
+tests

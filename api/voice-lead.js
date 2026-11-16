@@ -22,7 +22,8 @@ export default async function handler(req, res) {
   const name = clean(body.name, 80);
   const phone = clean(body.phone, 40);
   const topic = TOPICS.includes(body.topic) ? body.topic : null;
-  const summary = clean(body.summary, 1000);
+  // Аудит M4: только тема обращения. Предел на сервере — на случай, если агент напишет длиннее
+  const summary = clean(body.summary, 300);
   const ageNum = parseInt(body.age, 10);
   const age = ageNum >= 5 && ageNum <= 120 ? ageNum : null;
 
