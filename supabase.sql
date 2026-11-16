@@ -155,3 +155,17 @@ create index if not exists login_attempts_ip_at_idx on public.login_attempts (ip
 create index if not exists login_attempts_at_idx on public.login_attempts (at);
 alter table public.login_attempts enable row level security;
 revoke all on public.login_attempts from anon, authenticated;
+
+-- ---------- Отправки формы заявки (то же, что migrations/006_lead_attempts.sql) ----------
+-- api/lead.js: больше 5 заявок с одного адреса или 30 всего за 60 минут → 429.
+-- Вместо IP хранится HMAC-отпечаток.
+create table if not exists public.lead_attempts (
+  id      bigint generated always as identity primary key,
+  at      timestamptz not null default now(),
+  ip_hash text not null constraint lead_attempts_ip_hash_check check (length(ip_hash) between 1 and 64)
+);
+
+create index if not exists lead_attempts_ip_at_idx on public.lead_attempts (ip_hash, at);
+create index if not exists lead_attempts_at_idx on public.lead_attempts (at);
+alter table public.lead_attempts enable row level security;
+revoke all on public.lead_attempts from anon, authenticated;

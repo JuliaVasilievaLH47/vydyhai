@@ -1,23 +1,11 @@
 // POST /api/login — проверяет пароль админа и выдаёт токен на 12 часов.
 // Лимит попыток (аудит безопасности, M1): таблица login_attempts, миграция 005.
-import crypto from "node:crypto";
-import { readBody, safeEqual, makeToken, supabase, telegram, env } from "./_lib.js";
+import { readBody, safeEqual, makeToken, supabase, telegram, clientIp, ipHash } from "./_lib.js";
 
 const WINDOW_MIN = 15;     // окно подсчёта попыток, минут
 const LIMIT_PER_IP = 10;   // попыток с одного адреса за окно
 const LIMIT_TOTAL = 100;   // попыток со всех адресов за окно — защита от перебора с многих IP
 const KEEP_HOURS = 24;     // старые записи удаляются
-
-// Адрес клиента. На Vercel x-real-ip и x-forwarded-for ставит сама платформа, подделать их нельзя.
-function clientIp(req) {
-  const real = String(req.headers["x-real-ip"] || "").trim();
-  if (real) return real;
-  return String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
-}
-
-// В базе храним не IP, а его отпечаток: по нему можно считать попытки, но нельзя узнать адрес
-const ipHash = (ip) =>
-  crypto.createHmac("sha256", env("SESSION_SECRET")).update("login:" + ip).digest("hex").slice(0, 32);
 
 const notify = (text) => telegram(text).catch((e) => console.error("Telegram:", e.message));
 
@@ -32,7 +20,7 @@ export default async function handler(req, res) {
   const expected = process.env.ADMIN_PASSWORD;
   if (!expected) return res.status(500).json({ error: "На сервере не задан ADMIN_PASSWORD" });
 
-  const hash = ipHash(clientIp(req));
+  const hash = ipHash("login", clientIp(req));
   const since = new Date(Date.now() - WINDOW_MIN * 60e3).toISOString();
 
   // Сначала записываем попытку, потом считаем. Так параллельные запросы не проскочат лимит:

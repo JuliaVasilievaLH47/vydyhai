@@ -34,6 +34,18 @@ export function env(name) {
   return value;
 }
 
+// Адрес клиента. На Vercel x-real-ip и x-forwarded-for ставит сама платформа, подделать их нельзя.
+export function clientIp(req) {
+  const real = String(req.headers["x-real-ip"] || "").trim();
+  if (real) return real;
+  return String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+}
+
+// В базе храним не IP, а его отпечаток: по нему можно считать попытки, но нельзя узнать адрес.
+// scope разделяет счётчики: "login" — вход в админку, "lead" — форма заявки.
+export const ipHash = (scope, ip) =>
+  crypto.createHmac("sha256", env("SESSION_SECRET")).update(scope + ":" + ip).digest("hex").slice(0, 32);
+
 const supabaseUrl = () => env("SUPABASE_URL").replace(/\/+$/, "");
 
 function supabaseHeaders(extra) {
