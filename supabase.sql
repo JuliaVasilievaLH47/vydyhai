@@ -141,3 +141,17 @@ on conflict (id) do update
   set public             = false,
       file_size_limit    = excluded.file_size_limit,
       allowed_mime_types = excluded.allowed_mime_types;
+
+-- ---------- Попытки входа в админку (то же, что migrations/005_login_attempts.sql) ----------
+-- api/login.js: больше 10 попыток с одного адреса или 100 всего за 15 минут → 429.
+-- Вместо IP хранится HMAC-отпечаток.
+create table if not exists public.login_attempts (
+  id      bigint generated always as identity primary key,
+  at      timestamptz not null default now(),
+  ip_hash text not null constraint login_attempts_ip_hash_check check (length(ip_hash) between 1 and 64)
+);
+
+create index if not exists login_attempts_ip_at_idx on public.login_attempts (ip_hash, at);
+create index if not exists login_attempts_at_idx on public.login_attempts (at);
+alter table public.login_attempts enable row level security;
+revoke all on public.login_attempts from anon, authenticated;
