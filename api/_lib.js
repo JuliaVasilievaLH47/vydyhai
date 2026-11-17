@@ -104,9 +104,10 @@ export async function countAttempt(table, hash, { windowMin, limitPerIp, limitTo
 // Не больше стольких уведомлений о заблокированных адресах за окно лимита (аудит N4)
 export const MAX_IP_ALERTS = 3;
 
-// Текст уведомления о заблокированном адресе: на последнем разрешённом — предупреждение, что дальше тишина
-export const ipAlertText = (text, ipAlert) =>
-  ipAlert === MAX_IP_ALERTS ? `${text}\nЭто ${MAX_IP_ALERTS}-й заблокированный адрес за окно. О следующих не пишу до конца окна, общий лимит работает.` : text;
+// Текст уведомления о заблокированном адресе: на последнем разрешённом — предупреждение, что дальше тишина.
+// what — что заблокировано: «адрес», «номер» (голосовой агент), «аккаунт» (Mini App).
+export const ipAlertText = (text, ipAlert, what = "адрес") =>
+  ipAlert === MAX_IP_ALERTS ? `${text}\nЭто ${MAX_IP_ALERTS}-й заблокированный ${what} за окно. О следующих не пишу до конца окна, общий лимит работает.` : text;
 
 // ---------- Supabase Storage: приватные bucket receipts (чеки) и invoices (счета) ----------
 // Последний аргумент — имя bucket, по умолчанию receipts.

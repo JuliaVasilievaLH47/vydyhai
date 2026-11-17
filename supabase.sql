@@ -174,3 +174,34 @@ create index if not exists lead_attempts_at_idx on public.lead_attempts (at);
 create index if not exists lead_attempts_passed_at_idx on public.lead_attempts (at) where passed;
 alter table public.lead_attempts enable row level security;
 revoke all on public.lead_attempts from anon, authenticated;
+
+-- ---------- Заявки голосового агента и записи Mini App (то же, что migrations/008) ----------
+-- Устройство как у lead_attempts. Отдельные таблицы: спам в одном канале не закрывает другие.
+-- voice_attempts — api/voice-lead.js: больше 2 заявок с одного телефона или 10 всего за 60 минут → отказ.
+-- app_attempts — api/app.js (POST): больше 5 попыток с одного аккаунта Telegram или 10 всего за 60 минут → 429.
+-- В ip_hash — HMAC-отпечаток телефона или telegram_id.
+create table if not exists public.voice_attempts (
+  id      bigint generated always as identity primary key,
+  at      timestamptz not null default now(),
+  ip_hash text not null constraint voice_attempts_ip_hash_check check (length(ip_hash) between 1 and 64),
+  passed  boolean not null default false
+);
+
+create index if not exists voice_attempts_ip_at_idx on public.voice_attempts (ip_hash, at);
+create index if not exists voice_attempts_at_idx on public.voice_attempts (at);
+create index if not exists voice_attempts_passed_at_idx on public.voice_attempts (at) where passed;
+alter table public.voice_attempts enable row level security;
+revoke all on public.voice_attempts from anon, authenticated;
+
+create table if not exists public.app_attempts (
+  id      bigint generated always as identity primary key,
+  at      timestamptz not null default now(),
+  ip_hash text not null constraint app_attempts_ip_hash_check check (length(ip_hash) between 1 and 64),
+  passed  boolean not null default false
+);
+
+create index if not exists app_attempts_ip_at_idx on public.app_attempts (ip_hash, at);
+create index if not exists app_attempts_at_idx on public.app_attempts (at);
+create index if not exists app_attempts_passed_at_idx on public.app_attempts (at) where passed;
+alter table public.app_attempts enable row level security;
+revoke all on public.app_attempts from anon, authenticated;

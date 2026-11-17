@@ -4,7 +4,18 @@
 // Доступ только с проверенным initData Telegram в заголовке "Authorization: tma <initData>", иначе 401.
 // Имя, telegram_id и username берутся только из проверенного initData.
 // Один файл на оба запроса: на бесплатном тарифе Vercel число функций ограничено.
-import { supabase, telegram, escapeHtml, readBody, clean, phoneOk, telegramUser, verifyTelegramData } from "./_lib.js";
+// Лимит попыток записи (аудит безопасности, N5): таблица app_attempts, миграция 008.
+import { supabase, telegram, escapeHtml, readBody, clean, phoneOk, telegramUser, verifyTelegramData, ipHash, countAttempt, ipAlertText } from "./_lib.js";
+
+// Лимит считаем по аккаунту Telegram, а не по IP: аккаунт подтверждён подписью initData.
+// Одна активная запись на аккаунт уже есть (индекс leads_telegram_active_uniq). Лимит ограничивает
+// поток попыток одного аккаунта и спам записями с многих аккаунтов: слотов всего 8 в день.
+const WINDOW_MIN = 60;        // окно подсчёта, минут
+const LIMIT_PER_USER = 5;     // попыток записи с одного аккаунта за окно
+const LIMIT_TOTAL = 10;       // попыток записи со всех аккаунтов за окно
+const KEEP_HOURS = 24;        // старые записи счётчика удаляются
+
+const notify = (text) => telegram(text).catch((e) => console.error("Telegram:", e.message));
 
 const TZ = "Europe/Chisinau";
 // Темы — как в форме на сайте (index.html), без «Просто перезвонить»
@@ -126,6 +137,27 @@ export default async function handler(req, res) {
       const picked = pickPhone(body, user);
       if (picked.error) return res.status(400).json({ error: picked.error });
 
+      // Лимит — после проверки полей: ошибки ввода ничего не пишут в базу, а попытки записи считаются
+      let perIp, total, ipAlert;
+      try {
+        ({ perIp, total, ipAlert } = await countAttempt("app_attempts", ipHash("app", String(user.id)), {
+          windowMin: WINDOW_MIN, limitPerIp: LIMIT_PER_USER, limitTotal: LIMIT_TOTAL,
+        }));
+      } catch (e) {
+        // Счётчик недоступен — запись закрыта, а не открыта без лимита
+        console.error("app_attempts:", e.message);
+        return res.status(503).json({ error: "Запись временно не работает. Попробуй ещё раз чуть позже." });
+      }
+      if (perIp > LIMIT_PER_USER || total > LIMIT_TOTAL) {
+        if (ipAlert) {
+          await notify(ipAlertText(`⚠️ Mini App: ${LIMIT_PER_USER} попыток записи с одного аккаунта Telegram (ID ${user.id}) за ${WINDOW_MIN} минут. Аккаунт заблокирован на час.`, ipAlert, "аккаунт"));
+        } else if (total === LIMIT_TOTAL + 1) {
+          await notify(`⚠️ Mini App: ${LIMIT_TOTAL} попыток записи за ${WINDOW_MIN} минут с разных аккаунтов. Похоже на спам. Запись закрыта на час, проверьте воронку.`);
+        }
+        res.setHeader("Retry-After", String(WINDOW_MIN * 60));
+        return res.status(429).json({ error: "Слишком много попыток записи. Попробуй через час." });
+      }
+
       const name = clean([user.first_name, user.last_name].filter(Boolean).join(" "), 80) || "Без имени";
       const username = user.username ? clean(user.username, 64) : null;
 
@@ -152,6 +184,11 @@ export default async function handler(req, res) {
         }
         throw err;
       }
+
+      // Старые записи счётчика удаляем. Сбой уборки не мешает записи.
+      const old = new Date(Date.now() - KEEP_HOURS * 3600e3).toISOString();
+      await supabase(`app_attempts?at=lt.${encodeURIComponent(old)}`, { method: "DELETE" })
+        .catch((e) => console.error("app_attempts cleanup:", e.message));
 
       // Запись уже сохранена, поэтому сбой Telegram не должен ломать ответ
       try {
