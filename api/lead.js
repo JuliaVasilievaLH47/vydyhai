@@ -1,7 +1,7 @@
 // POST /api/lead — принимает заявку с сайта, сохраняет в Supabase и пишет владельцу в Telegram.
 // Запись в историю этапов («создана → Новая») делает триггер в базе.
 // Лимит заявок (аудит безопасности, M2, N2): таблица lead_attempts, миграции 006 и 007.
-import { supabase, telegram, escapeHtml, readBody, clean, phoneOk, clientIp, ipHash, countAttempt } from "./_lib.js";
+import { supabase, telegram, escapeHtml, readBody, clean, phoneOk, clientIp, ipHash, countAttempt, ipAlertText } from "./_lib.js";
 
 const WINDOW_MIN = 60;     // окно подсчёта отправок, минут
 const LIMIT_PER_IP = 5;    // заявок с одного адреса за окно
@@ -26,9 +26,9 @@ export default async function handler(req, res) {
   // Лимит считаем до проверки полей: пустые и кривые запросы тоже нагружают сервер.
   // Как считаем — в countAttempt (_lib.js): один адрес не может закрыть форму для всех.
   const hash = ipHash("lead", clientIp(req));
-  let perIp, total;
+  let perIp, total, ipAlert;
   try {
-    ({ perIp, total } = await countAttempt("lead_attempts", hash, {
+    ({ perIp, total, ipAlert } = await countAttempt("lead_attempts", hash, {
       windowMin: WINDOW_MIN, limitPerIp: LIMIT_PER_IP, limitTotal: LIMIT_TOTAL,
     }));
   } catch (e) {
@@ -38,9 +38,9 @@ export default async function handler(req, res) {
   }
 
   if (perIp > LIMIT_PER_IP || total > LIMIT_TOTAL) {
-    // Оповещаем один раз — на первой заблокированной отправке
-    if (perIp === LIMIT_PER_IP + 1) {
-      await notify(`⚠️ Форма заявки: ${LIMIT_PER_IP} заявок с одного адреса за ${WINDOW_MIN} минут. Адрес заблокирован на час.`);
+    // Оповещаем один раз — на первой заблокированной отправке, и не больше чем о 3 адресах за окно (аудит N4)
+    if (ipAlert) {
+      await notify(ipAlertText(`⚠️ Форма заявки: ${LIMIT_PER_IP} заявок с одного адреса за ${WINDOW_MIN} минут. Адрес заблокирован на час.`, ipAlert));
     } else if (total === LIMIT_TOTAL + 1) {
       await notify(`⚠️ Форма заявки: ${LIMIT_TOTAL} заявок за ${WINDOW_MIN} минут с разных адресов. Похоже на спам. Форма закрыта на час, проверьте воронку.`);
     }

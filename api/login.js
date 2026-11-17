@@ -1,6 +1,6 @@
 // POST /api/login — проверяет пароль админа и выдаёт токен на 12 часов.
 // Лимит попыток (аудит безопасности, M1, N3): таблица login_attempts, миграции 005 и 007.
-import { readBody, safeEqual, makeToken, supabase, telegram, clientIp, ipHash, countAttempt } from "./_lib.js";
+import { readBody, safeEqual, makeToken, supabase, telegram, clientIp, ipHash, countAttempt, ipAlertText } from "./_lib.js";
 
 const WINDOW_MIN = 15;     // окно подсчёта попыток, минут
 const LIMIT_PER_IP = 10;   // попыток с одного адреса за окно
@@ -24,9 +24,9 @@ export default async function handler(req, res) {
 
   // Как считаем — в countAttempt (_lib.js): параллельные запросы не проскочат лимит,
   // а один адрес не может закрыть вход для всех.
-  let perIp, total;
+  let perIp, total, ipAlert;
   try {
-    ({ perIp, total } = await countAttempt("login_attempts", hash, {
+    ({ perIp, total, ipAlert } = await countAttempt("login_attempts", hash, {
       windowMin: WINDOW_MIN, limitPerIp: LIMIT_PER_IP, limitTotal: LIMIT_TOTAL,
     }));
   } catch (e) {
@@ -36,9 +36,9 @@ export default async function handler(req, res) {
   }
 
   if (perIp > LIMIT_PER_IP || total > LIMIT_TOTAL) {
-    // Оповещаем один раз — на первой заблокированной попытке
-    if (perIp === LIMIT_PER_IP + 1) {
-      await notify(`⚠️ Админка: ${LIMIT_PER_IP} попыток входа с одного адреса за ${WINDOW_MIN} минут. Адрес заблокирован на ${WINDOW_MIN} минут.`);
+    // Оповещаем один раз — на первой заблокированной попытке, и не больше чем о 3 адресах за окно (аудит N4)
+    if (ipAlert) {
+      await notify(ipAlertText(`⚠️ Админка: ${LIMIT_PER_IP} попыток входа с одного адреса за ${WINDOW_MIN} минут. Адрес заблокирован на ${WINDOW_MIN} минут.`, ipAlert));
     } else if (total === LIMIT_TOTAL + 1) {
       await notify(`⚠️ Админка: ${LIMIT_TOTAL} попыток входа за ${WINDOW_MIN} минут с разных адресов. Похоже на подбор пароля. Вход закрыт на ${WINDOW_MIN} минут.`);
     }

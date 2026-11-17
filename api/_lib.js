@@ -74,8 +74,9 @@ export async function supabase(path, { method = "GET", body, prefer } = {}) {
 // В общий счётчик идут только попытки, прошедшие лимит адреса (passed = true, миграция 007).
 // Поэтому один адрес добавляет в общий счётчик не больше limitPerIp попыток
 // и не может закрыть вход или форму для всех.
-// Возвращает { perIp, total } — не больше лимита + 2. «Лимит + 1» — первая заблокированная попытка
-// (по ней шлём уведомление), «лимит + 2» — все следующие. Адрес уже превысил лимит → total = 0.
+// Возвращает { perIp, total, ipAlert }. perIp и total — не больше лимита + 2. «Лимит + 1» — первая
+// заблокированная попытка адреса, «лимит + 2» — все следующие. Адрес уже превысил лимит → total = 0.
+// ipAlert — номер уведомления о заблокированном адресе (1…MAX_IP_ALERTS) или 0, если слать не нужно.
 // Сбой базы — исключение: вызывающий код закрывает вход или форму (503), а не пропускает без лимита.
 export async function countAttempt(table, hash, { windowMin, limitPerIp, limitTotal }) {
   const since = encodeURIComponent(new Date(Date.now() - windowMin * 60e3).toISOString());
@@ -83,12 +84,29 @@ export async function countAttempt(table, hash, { windowMin, limitPerIp, limitTo
     method: "POST", body: { ip_hash: hash }, prefer: "return=representation",
   });
   const mine = await supabase(`${table}?select=id&ip_hash=eq.${hash}&at=gte.${since}&limit=${limitPerIp + 2}`);
-  if (mine.length > limitPerIp) return { perIp: mine.length, total: 0 };
+  if (mine.length > limitPerIp) {
+    // Аудит N4: атакующий меняет IP, и каждый новый заблокированный адрес слал бы отдельное уведомление.
+    // Шлём не больше MAX_IP_ALERTS за окно. Заблокированные попытки — это записи с passed = false.
+    // Запрос к базе — только на первой блокировке адреса, дальше адрес просто получает 429.
+    let ipAlert = 0;
+    if (mine.length === limitPerIp + 1) {
+      const blocked = await supabase(`${table}?select=id&passed=is.false&at=gte.${since}&limit=${MAX_IP_ALERTS + 1}`);
+      if (blocked.length <= MAX_IP_ALERTS) ipAlert = blocked.length;
+    }
+    return { perIp: mine.length, total: 0, ipAlert };
+  }
 
   await supabase(`${table}?id=eq.${row.id}`, { method: "PATCH", body: { passed: true }, prefer: "return=minimal" });
   const all = await supabase(`${table}?select=id&passed=is.true&at=gte.${since}&limit=${limitTotal + 2}`);
-  return { perIp: mine.length, total: all.length };
+  return { perIp: mine.length, total: all.length, ipAlert: 0 };
 }
+
+// Не больше стольких уведомлений о заблокированных адресах за окно лимита (аудит N4)
+export const MAX_IP_ALERTS = 3;
+
+// Текст уведомления о заблокированном адресе: на последнем разрешённом — предупреждение, что дальше тишина
+export const ipAlertText = (text, ipAlert) =>
+  ipAlert === MAX_IP_ALERTS ? `${text}\nЭто ${MAX_IP_ALERTS}-й заблокированный адрес за окно. О следующих не пишу до конца окна, общий лимит работает.` : text;
 
 // ---------- Supabase Storage: приватные bucket receipts (чеки) и invoices (счета) ----------
 // Последний аргумент — имя bucket, по умолчанию receipts.

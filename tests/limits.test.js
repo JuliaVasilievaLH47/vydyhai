@@ -133,3 +133,22 @@ test("api/lead.js: адрес A забит 50 отправками, адрес B
   const b = await call(leadHandler, "10.0.0.2", {});
   assert.equal(b.statusCode, 400, "адрес B не заблокирован: 400 из-за пустой формы, а не 429");
 });
+
+// ---------- Аудит N4: смена IP не превращается в поток уведомлений ----------
+
+test("N4: 20 адресов по очереди упираются в лимит — уведомлений о блокировке адресов 3", async () => {
+  for (let ip = 1; ip <= 20; ip++) {
+    for (let i = 0; i < 6; i++) await call(leadHandler, "10.1.0." + ip, {});
+  }
+  const ipAlerts = telegramSent.filter((t) => t.includes("с одного адреса"));
+  assert.equal(ipAlerts.length, 3, "о заблокированных адресах — не больше 3 сообщений за окно");
+  assert.ok(ipAlerts[2].includes("О следующих не пишу"), "третье сообщение предупреждает, что дальше тишина");
+  const totalAlerts = telegramSent.filter((t) => t.includes("с разных адресов"));
+  assert.equal(totalAlerts.length, 1, "уведомление об общем лимите приходит, как и раньше");
+});
+
+test("N4: ipAlert только на первой блокировке адреса, на следующих запросах — 0", async () => {
+  const alerts = [];
+  for (let i = 0; i < 8; i++) alerts.push((await countAttempt("lead_attempts", "ip-A", LEAD)).ipAlert);
+  assert.deepEqual(alerts, [0, 0, 0, 0, 0, 1, 0, 0]);
+});
