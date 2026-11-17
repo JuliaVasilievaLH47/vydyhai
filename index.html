@@ -705,7 +705,8 @@ footer .wrap{display:grid;gap:20px}
 
 <!-- Голосовой агент ElevenLabs: кнопка «Поговорить». Настройки агента — scripts/voice-agent.mjs -->
 <elevenlabs-convai agent-id="agent_4101m73mjf9mej8rph1bxw6kdn85"></elevenlabs-convai>
-<script src="https://unpkg.com/@elevenlabs/convai-widget-embed@0.21.6" async type="text/javascript"></script>
+<!-- integrity — отпечаток файла версии 0.21.6: подменённый скрипт браузер не запустит. При смене версии пересчитать хеш (security-audit.md, L2) -->
+<script src="https://unpkg.com/@elevenlabs/convai-widget-embed@0.21.6/dist/index.js" integrity="sha384-DcxggTsQknKtYfoZ7po3cpe9QTmQAsp8aFPRbEPQD7uFKOOwxo17ocia6g5DfBaT" crossorigin="anonymous" async type="text/javascript"></script>
 <script>
 (function(){
   // Разделы, которые агент умеет показывать (инструмент show_section). Тот же список — в scripts/voice-agent.mjs.
