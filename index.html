@@ -677,10 +677,14 @@ footer .wrap{display:grid;gap:20px}
     if(!name && !phone){show("err","Форма пустая. Напиши имя и телефон, чтобы мы могли связаться."); $("f-name").focus(); return;}
     if(!name){show("err","Напиши, как к тебе обращаться."); $("f-name").focus(); return;}
     if(phone.replace(/\D/g,"").length < 6){show("err","Проверь номер телефона: в нём должно быть хотя бы 6 цифр."); $("f-contact").focus(); return;}
+    // Возраст: пусто или целое 10–99 — та же проверка в api/_lib.js (ageValue). Форма с novalidate, min/max браузер не проверяет
+    var age = $("f-age").value.trim();
+    if(age && !(/^\d+$/.test(age) && +age >= 10 && +age <= 99)){show("err","Проверь возраст: от 10 до 99 лет."); $("f-age").focus(); return;}
     if(!$("f-ok").checked){show("err","Отметь согласие на обработку контактов, без него мы не можем связаться."); return;}
     var btn = $("f-submit"); btn.disabled = true; btn.textContent = "Отправляем…";
     var lead = {
-      name:name, phone:phone, age:$("f-age").value || "",
+      // consent: галочка проверена выше; сервер без него заявку не сохранит (аудит L5)
+      name:name, phone:phone, age:age, consent:true,
       topic:(form.querySelector("input[name=type]:checked")||{}).value || "",
       comment:$("f-msg").value.trim(), website:$("f-website").value
     };

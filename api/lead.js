@@ -1,7 +1,8 @@
 // POST /api/lead — принимает заявку с сайта, сохраняет в Supabase и пишет владельцу в Telegram.
 // Запись в историю этапов («создана → Новая») делает триггер в базе.
 // Лимит заявок (аудит безопасности, M2, N2): таблица lead_attempts, миграции 006 и 007.
-import { supabase, telegram, escapeHtml, readBody, clean, phoneOk, clientIp, ipHash, countAttempt, ipAlertText } from "./_lib.js";
+// Согласие и возраст проверяет и сервер, а не только браузер (аудит L5, миграция 009).
+import { supabase, telegram, escapeHtml, readBody, clean, phoneOk, clientIp, ipHash, countAttempt, ipAlertText, ageValue, needsParent, PARENT_NOTE } from "./_lib.js";
 
 const WINDOW_MIN = 60;     // окно подсчёта отправок, минут
 const LIMIT_PER_IP = 5;    // заявок с одного адреса за окно
@@ -52,13 +53,18 @@ export default async function handler(req, res) {
   const phone = clean(body.phone, 40);
   const topic = clean(body.topic, 40);
   const comment = clean(body.comment, 1000);
-  const ageNum = parseInt(body.age, 10);
-  const age = ageNum >= 5 && ageNum <= 120 ? ageNum : null;
+  const { ok: ageOk, age } = ageValue(body.age);
 
+  // Порядок и тексты — как в index.html
   if (!name && !phone) return res.status(400).json({ error: "Форма пустая. Напиши имя и телефон." });
   if (!name) return res.status(400).json({ error: "Напиши, как к тебе обращаться." });
   if (!phoneOk(phone)) {
     return res.status(400).json({ error: "Проверь номер телефона: в нём должно быть хотя бы 6 цифр." });
+  }
+  if (!ageOk) return res.status(400).json({ error: "Проверь возраст: от 10 до 99 лет." });
+  // Строго true: прямой POST в обход формы без согласия не сохраняется (аудит L5)
+  if (body.consent !== true) {
+    return res.status(400).json({ error: "Отметь согласие на обработку контактов, без него мы не можем связаться." });
   }
 
   // Была ли заявка с этим телефоном за последние REPEAT_MIN минут. Если да — не шлём второе уведомление.
@@ -73,7 +79,8 @@ export default async function handler(req, res) {
     [lead] = await supabase("leads", {
       method: "POST",
       // Заявка с сайта всегда попадает в воронку на этап «Новая» с источником «Сайт»
-      body: { name, phone, age, topic, comment, source: "Сайт", status: "Новая" },
+      // consent_at — время сервера: клиентскому времени не верим
+      body: { name, phone, age, topic, comment, source: "Сайт", status: "Новая", consent_at: new Date().toISOString() },
       prefer: "return=representation",
     });
   } catch (err) {
@@ -97,6 +104,7 @@ export default async function handler(req, res) {
       `Имя: ${escapeHtml(name)}`,
       `Телефон: ${escapeHtml(phone)}`,
       age ? `Возраст: ${age}` : null,
+      needsParent(age) ? PARENT_NOTE : null,
       topic ? `Нужно: ${escapeHtml(topic)}` : null,
       comment ? `Комментарий: ${escapeHtml(comment)}` : null,
       `Время: ${when}`,

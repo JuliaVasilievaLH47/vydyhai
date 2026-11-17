@@ -3,7 +3,7 @@
 // и в сейфе ElevenLabs (Workspace secrets), браузер посетителя его не видит.
 // Запись в историю этапов («создана → Новая») делает триггер в базе.
 // Лимит заявок (аудит безопасности, N5): таблица voice_attempts, миграция 008.
-import { supabase, telegram, escapeHtml, readBody, clean, phoneOk, safeEqual, env, ipHash, countAttempt, ipAlertText } from "./_lib.js";
+import { supabase, telegram, escapeHtml, readBody, clean, phoneOk, safeEqual, env, ipHash, countAttempt, ipAlertText, needsParent, PARENT_NOTE } from "./_lib.js";
 
 const TOPICS = ["Врач", "Психолог", "Семинар", "Перезвонить"];
 
@@ -34,6 +34,7 @@ export default async function handler(req, res) {
   const topic = TOPICS.includes(body.topic) ? body.topic : null;
   // Аудит M4: только тема обращения. Предел на сервере — на случай, если агент напишет длиннее
   const summary = clean(body.summary, 300);
+  // Диапазон шире, чем в форме сайта: ребёнок младше 10 лет должен сохраниться с возрастом и пометкой «до 14» (аудит L5)
   const ageNum = parseInt(body.age, 10);
   const age = ageNum >= 5 && ageNum <= 120 ? ageNum : null;
 
@@ -75,7 +76,8 @@ export default async function handler(req, res) {
   try {
     [lead] = await supabase("leads", {
       method: "POST",
-      body: { name, phone, age, topic, comment: summary || null, source: "Голос", status: "Новая" },
+      // Согласие проверено выше; consent_at — время сервера (аудит L5)
+      body: { name, phone, age, topic, comment: summary || null, source: "Голос", status: "Новая", consent_at: new Date().toISOString() },
       prefer: "return=representation",
     });
   } catch (err) {
@@ -96,6 +98,7 @@ export default async function handler(req, res) {
       `Имя: ${escapeHtml(name)}`,
       `Телефон: ${escapeHtml(phone)}`,
       age ? `Возраст: ${age}` : null,
+      needsParent(age) ? PARENT_NOTE : null,
       topic ? `Нужно: ${escapeHtml(topic)}` : null,
       summary ? `О разговоре: ${escapeHtml(summary)}` : null,
       `Время: ${when}`,

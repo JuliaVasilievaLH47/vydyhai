@@ -139,7 +139,7 @@ function initData(userId) {
 const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("sv-SE", { timeZone: "Europe/Chisinau" });
 const book = (userId) => call(appHandler, {
   headers: { authorization: "tma " + initData(userId) },
-  body: { topic: "Психолог", date: tomorrow, time: "12:00", phone: "+373 600 00 000" },
+  body: { topic: "Психолог", date: tomorrow, time: "12:00", phone: "+373 600 00 000", consent: true },
 });
 
 test("app: один аккаунт — 5 попыток записи, шестая 429, уведомление о блокировке одно", async () => {

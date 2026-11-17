@@ -302,6 +302,8 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
 (function(){
   // Этапы воронки. Тот же список — в api/_lib.js и в check-ограничении supabase.sql
   var STATUSES = ["Новая", "Связались", "Записан на консультацию", "Консультация проведена", "Оплачено", "Отказ"];
+  // До 14 лет заявку оставляет родитель — та же граница в api/_lib.js (AGE_PARENT)
+  var AGE_PARENT = 14;
   var $ = function(id){ return document.getElementById(id); };
   var token = null, leads = [], current = null; // current — id клиента в открытой карточке
   try { token = sessionStorage.getItem("vydyhai_token"); } catch(e){}
@@ -451,7 +453,10 @@ dialog::backdrop{background:rgba(20,18,36,.55)}
     if (lead.consultation_at) row("Консультация", fmt(lead.consultation_at));
     row("Источник", lead.source);
     row("Создан", fmt(lead.created_at));
-    if (lead.age) row("Возраст", String(lead.age));
+    if (lead.age) row("Возраст", lead.age < AGE_PARENT ? lead.age + " — уточнить согласие родителя" : String(lead.age));
+    // Время согласия ставит сервер (аудит L5). У клиентов «Вручную» его нет: согласие берёт админ при звонке
+    if (lead.consent_at) row("Согласие", fmt(lead.consent_at));
+    else if (lead.source !== "Вручную") row("Согласие", "не записано");
     if (lead.topic) row("Тема", lead.topic);
     if (lead.comment) row("Комментарий с сайта", lead.comment);
 

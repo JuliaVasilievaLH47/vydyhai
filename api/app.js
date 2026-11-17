@@ -5,6 +5,7 @@
 // Имя, telegram_id и username берутся только из проверенного initData.
 // Один файл на оба запроса: на бесплатном тарифе Vercel число функций ограничено.
 // Лимит попыток записи (аудит безопасности, N5): таблица app_attempts, миграция 008.
+// Без согласия на обработку данных запись не создаётся (аудит L5), время согласия — consent_at, миграция 009.
 import { supabase, telegram, escapeHtml, readBody, clean, phoneOk, telegramUser, verifyTelegramData, ipHash, countAttempt, ipAlertText } from "./_lib.js";
 
 // Лимит считаем по аккаунту Telegram, а не по IP: аккаунт подтверждён подписью initData.
@@ -133,6 +134,10 @@ export default async function handler(req, res) {
       if (at - Date.now() < MIN_LEAD_MS) {
         return res.status(409).json({ error: "На это время записаться уже нельзя. Выбери другое.", refresh: true });
       }
+      // Строго true, до лимита: без согласия в базу не попадает ничего (аудит L5)
+      if (body.consent !== true) {
+        return res.status(400).json({ error: "Отметь согласие на обработку данных, без него мы не можем записать." });
+      }
 
       const picked = pickPhone(body, user);
       if (picked.error) return res.status(400).json({ error: picked.error });
@@ -170,6 +175,7 @@ export default async function handler(req, res) {
             source: "Telegram", status: BOOKED,
             telegram_id: user.id, telegram_username: username,
             consultation_at: new Date(at).toISOString(),
+            consent_at: new Date().toISOString(),
           },
           prefer: "return=representation",
         });

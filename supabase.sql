@@ -22,7 +22,10 @@ create table if not exists public.leads (
   telegram_username text,
   consultation_at   timestamptz
                     constraint leads_consultation_hour_check
-                    check (consultation_at is null or date_trunc('hour', consultation_at) = consultation_at)
+                    check (consultation_at is null or date_trunc('hour', consultation_at) = consultation_at),
+  -- Время согласия на обработку контактов, ставит сервер (migrations/009_consent.sql, аудит L5).
+  -- Пусто у клиентов, добавленных админом вручную
+  consent_at        timestamptz
 );
 
 create index if not exists leads_created_at_idx on public.leads (created_at desc);

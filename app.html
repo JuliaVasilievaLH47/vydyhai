@@ -65,6 +65,10 @@ input{font:500 16px/1.4 var(--body);width:100%;padding:12px 14px;border:2px soli
 .wide{width:100%}
 .ok{font-weight:700;color:var(--ink);margin:10px 0 0}
 .msg{font-weight:700;padding:12px 14px;border-radius:12px;background:var(--lemon);color:var(--on-bright);border:2px solid var(--ink);margin:0 0 16px}
+/* Согласие — как на сайте (index.html, .check) */
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--muted);cursor:pointer}
+.check input{width:22px;height:22px;padding:0;accent-color:var(--hot);margin-top:1px;flex:none}
+.msg-inline{font-weight:700;font-size:14px;color:var(--hot);margin:10px 0 0}
 
 /* Экраны-заглушки и итог */
 .center{min-height:calc(100vh - var(--top) - var(--bottom) - 140px);display:grid;align-content:center;gap:14px;text-align:center;justify-items:center}
@@ -124,6 +128,13 @@ input{font:500 16px/1.4 var(--body);width:100%;padding:12px 14px;border:2px soli
         <input id="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="40" placeholder="+373 …">
       </div>
       <p class="hint" id="phone-hint">Номер нужен, только если тебе удобнее, чтобы мы позвонили.</p>
+    </div>
+
+    <!-- Без согласия сервер запись не создаёт (api/app.js, аудит L5) -->
+    <div class="step">
+      <h2><b>5</b>Согласие</h2>
+      <label class="check" for="consent"><input type="checkbox" id="consent">Я согласен(на), чтобы вы использовали мои данные из Telegram и телефон только для связи по записи. Если мне меньше 14 лет, записывает родитель.</label>
+      <p class="msg-inline" id="consent-err" role="alert" hidden></p>
     </div>
   </section>
 
@@ -320,12 +331,20 @@ input{font:500 16px/1.4 var(--body);width:100%;padding:12px 14px;border:2px soli
   // ---------- Запись ----------
   function submit(){
     if (state.busy || !(state.topic && state.date && state.time)) return;
+    // Тот же текст, что у сервера. Кнопка не прячется: видно, чего не хватает
+    if (!$("consent").checked) {
+      $("consent-err").textContent = "Отметь согласие на обработку данных, без него мы не можем записать.";
+      $("consent-err").hidden = false;
+      $("consent-err").scrollIntoView({block: "center", behavior: "smooth"});
+      haptic("error");
+      return;
+    }
     state.busy = true; msg("");
     if (useMain) tg.MainButton.showProgress(false);
     update();
     api("POST", {
       topic: state.topic, date: state.date, time: state.time,
-      phone: $("phone").value.trim(), contact: state.contact
+      phone: $("phone").value.trim(), contact: state.contact, consent: true
     }).then(function(r){
       haptic("success");
       if (useMain) tg.MainButton.hide(); else $("fallback").hidden = true;
@@ -345,6 +364,7 @@ input{font:500 16px/1.4 var(--body);width:100%;padding:12px 14px;border:2px soli
   }
   if (useMain) tg.MainButton.onClick(submit);
   $("submit-fallback").addEventListener("click", submit);
+  $("consent").addEventListener("change", function(){ if (this.checked) $("consent-err").hidden = true; });
 
   // ---------- Телефон через Telegram (Bot API 6.9+) ----------
   // Telegram присылает подписанную строку с контактом — сервер проверит подпись и что номер именно этого пользователя

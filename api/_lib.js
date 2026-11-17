@@ -19,6 +19,22 @@ export const SELLER = {
 // В телефоне должно быть хотя бы 6 цифр (та же проверка — в формах index.html и admin.html)
 export const phoneOk = (phone) => String(phone).replace(/\D/g, "").length >= 6;
 
+// Возраст в форме сайта (аудит L5): пусто — не указан, иначе целое 10–99. Та же проверка — в index.html.
+// Форма шлёт строку ("12"), поэтому сначала Number(String(v).trim()).
+export const AGE_MIN = 10;
+export const AGE_MAX = 99;
+export function ageValue(v) {
+  if (v === undefined || v === null || v === "") return { ok: true, age: null };
+  const n = Number(String(v).trim());
+  return Number.isInteger(n) && n >= AGE_MIN && n <= AGE_MAX ? { ok: true, age: n } : { ok: false };
+}
+
+// До 14 лет заявку оставляет родитель: админ видит пометку в Telegram и в карточке (та же граница — в admin.html).
+// Проверка на null обязательна: в JS null < 14 — true.
+export const AGE_PARENT = 14;
+export const needsParent = (age) => age !== null && age !== undefined && age < AGE_PARENT;
+export const PARENT_NOTE = "⚠️ Младше 14 лет: уточните, что заявку оставил родитель";
+
 // Категории расходов. Тот же список — в admin.html и в check-ограничении expenses (supabase.sql).
 export const CATEGORIES = ["Реклама", "Печать материалов", "Консультанты", "Сервисы и подписки", "Прочее"];
 
