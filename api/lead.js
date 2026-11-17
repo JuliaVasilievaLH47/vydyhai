@@ -1,7 +1,7 @@
 // POST /api/lead — принимает заявку с сайта, сохраняет в Supabase и пишет владельцу в Telegram.
 // Запись в историю этапов («создана → Новая») делает триггер в базе.
-// Лимит заявок (аудит безопасности, M2): таблица lead_attempts, миграция 006.
-import { supabase, telegram, escapeHtml, readBody, clean, phoneOk, clientIp, ipHash } from "./_lib.js";
+// Лимит заявок (аудит безопасности, M2, N2): таблица lead_attempts, миграции 006 и 007.
+import { supabase, telegram, escapeHtml, readBody, clean, phoneOk, clientIp, ipHash, countAttempt } from "./_lib.js";
 
 const WINDOW_MIN = 60;     // окно подсчёта отправок, минут
 const LIMIT_PER_IP = 5;    // заявок с одного адреса за окно
@@ -24,27 +24,24 @@ export default async function handler(req, res) {
   if (body.website) return res.status(200).json({ ok: true });
 
   // Лимит считаем до проверки полей: пустые и кривые запросы тоже нагружают сервер.
-  // Сначала записываем отправку, потом считаем — так параллельные запросы не проскочат лимит.
+  // Как считаем — в countAttempt (_lib.js): один адрес не может закрыть форму для всех.
   const hash = ipHash("lead", clientIp(req));
-  const since = new Date(Date.now() - WINDOW_MIN * 60e3).toISOString();
   let perIp, total;
   try {
-    await supabase("lead_attempts", { method: "POST", body: { ip_hash: hash }, prefer: "return=minimal" });
-    [perIp, total] = await Promise.all([
-      supabase(`lead_attempts?select=id&ip_hash=eq.${hash}&at=gte.${encodeURIComponent(since)}&limit=${LIMIT_PER_IP + 2}`),
-      supabase(`lead_attempts?select=id&at=gte.${encodeURIComponent(since)}&limit=${LIMIT_TOTAL + 2}`),
-    ]);
+    ({ perIp, total } = await countAttempt("lead_attempts", hash, {
+      windowMin: WINDOW_MIN, limitPerIp: LIMIT_PER_IP, limitTotal: LIMIT_TOTAL,
+    }));
   } catch (e) {
     // Счётчик недоступен — форма закрыта, а не открыта без лимита
     console.error("lead_attempts:", e.message);
     return res.status(503).json({ error: "Форма временно не работает. Попробуй ещё раз чуть позже." });
   }
 
-  if (perIp.length > LIMIT_PER_IP || total.length > LIMIT_TOTAL) {
+  if (perIp > LIMIT_PER_IP || total > LIMIT_TOTAL) {
     // Оповещаем один раз — на первой заблокированной отправке
-    if (perIp.length === LIMIT_PER_IP + 1) {
+    if (perIp === LIMIT_PER_IP + 1) {
       await notify(`⚠️ Форма заявки: ${LIMIT_PER_IP} заявок с одного адреса за ${WINDOW_MIN} минут. Адрес заблокирован на час.`);
-    } else if (total.length === LIMIT_TOTAL + 1) {
+    } else if (total === LIMIT_TOTAL + 1) {
       await notify(`⚠️ Форма заявки: ${LIMIT_TOTAL} заявок за ${WINDOW_MIN} минут с разных адресов. Похоже на спам. Форма закрыта на час, проверьте воронку.`);
     }
     res.setHeader("Retry-After", String(WINDOW_MIN * 60));

@@ -1,6 +1,6 @@
 // POST /api/login — проверяет пароль админа и выдаёт токен на 12 часов.
-// Лимит попыток (аудит безопасности, M1): таблица login_attempts, миграция 005.
-import { readBody, safeEqual, makeToken, supabase, telegram, clientIp, ipHash } from "./_lib.js";
+// Лимит попыток (аудит безопасности, M1, N3): таблица login_attempts, миграции 005 и 007.
+import { readBody, safeEqual, makeToken, supabase, telegram, clientIp, ipHash, countAttempt } from "./_lib.js";
 
 const WINDOW_MIN = 15;     // окно подсчёта попыток, минут
 const LIMIT_PER_IP = 10;   // попыток с одного адреса за окно
@@ -21,30 +21,25 @@ export default async function handler(req, res) {
   if (!expected) return res.status(500).json({ error: "На сервере не задан ADMIN_PASSWORD" });
 
   const hash = ipHash("login", clientIp(req));
-  const since = new Date(Date.now() - WINDOW_MIN * 60e3).toISOString();
 
-  // Сначала записываем попытку, потом считаем. Так параллельные запросы не проскочат лимит:
-  // каждый следующий видит все записи, сделанные до него.
-  // Читаем на 2 строки больше лимита: «лимит + 1» — первая заблокированная попытка (уведомление),
-  // «лимит + 2» — все следующие (без уведомления).
+  // Как считаем — в countAttempt (_lib.js): параллельные запросы не проскочат лимит,
+  // а один адрес не может закрыть вход для всех.
   let perIp, total;
   try {
-    await supabase("login_attempts", { method: "POST", body: { ip_hash: hash }, prefer: "return=minimal" });
-    [perIp, total] = await Promise.all([
-      supabase(`login_attempts?select=id&ip_hash=eq.${hash}&at=gte.${encodeURIComponent(since)}&limit=${LIMIT_PER_IP + 2}`),
-      supabase(`login_attempts?select=id&at=gte.${encodeURIComponent(since)}&limit=${LIMIT_TOTAL + 2}`),
-    ]);
+    ({ perIp, total } = await countAttempt("login_attempts", hash, {
+      windowMin: WINDOW_MIN, limitPerIp: LIMIT_PER_IP, limitTotal: LIMIT_TOTAL,
+    }));
   } catch (e) {
     // Счётчик недоступен — вход закрыт, а не открыт без лимита
     console.error("login_attempts:", e.message);
     return res.status(503).json({ error: "Вход временно недоступен. Попробуйте через несколько минут." });
   }
 
-  if (perIp.length > LIMIT_PER_IP || total.length > LIMIT_TOTAL) {
+  if (perIp > LIMIT_PER_IP || total > LIMIT_TOTAL) {
     // Оповещаем один раз — на первой заблокированной попытке
-    if (perIp.length === LIMIT_PER_IP + 1) {
+    if (perIp === LIMIT_PER_IP + 1) {
       await notify(`⚠️ Админка: ${LIMIT_PER_IP} попыток входа с одного адреса за ${WINDOW_MIN} минут. Адрес заблокирован на ${WINDOW_MIN} минут.`);
-    } else if (total.length === LIMIT_TOTAL + 1) {
+    } else if (total === LIMIT_TOTAL + 1) {
       await notify(`⚠️ Админка: ${LIMIT_TOTAL} попыток входа за ${WINDOW_MIN} минут с разных адресов. Похоже на подбор пароля. Вход закрыт на ${WINDOW_MIN} минут.`);
     }
     res.setHeader("Retry-After", String(WINDOW_MIN * 60));

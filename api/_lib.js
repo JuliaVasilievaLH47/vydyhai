@@ -69,6 +69,27 @@ export async function supabase(path, { method = "GET", body, prefer } = {}) {
   return text ? JSON.parse(text) : null;
 }
 
+// ---------- Счётчик попыток для лимитов: вход в админку и форма заявки (аудит M1, M2, N2, N3) ----------
+// Попытка сначала записывается, потом считается: параллельные запросы с одного адреса не проскочат лимит.
+// В общий счётчик идут только попытки, прошедшие лимит адреса (passed = true, миграция 007).
+// Поэтому один адрес добавляет в общий счётчик не больше limitPerIp попыток
+// и не может закрыть вход или форму для всех.
+// Возвращает { perIp, total } — не больше лимита + 2. «Лимит + 1» — первая заблокированная попытка
+// (по ней шлём уведомление), «лимит + 2» — все следующие. Адрес уже превысил лимит → total = 0.
+// Сбой базы — исключение: вызывающий код закрывает вход или форму (503), а не пропускает без лимита.
+export async function countAttempt(table, hash, { windowMin, limitPerIp, limitTotal }) {
+  const since = encodeURIComponent(new Date(Date.now() - windowMin * 60e3).toISOString());
+  const [row] = await supabase(`${table}?select=id`, {
+    method: "POST", body: { ip_hash: hash }, prefer: "return=representation",
+  });
+  const mine = await supabase(`${table}?select=id&ip_hash=eq.${hash}&at=gte.${since}&limit=${limitPerIp + 2}`);
+  if (mine.length > limitPerIp) return { perIp: mine.length, total: 0 };
+
+  await supabase(`${table}?id=eq.${row.id}`, { method: "PATCH", body: { passed: true }, prefer: "return=minimal" });
+  const all = await supabase(`${table}?select=id&passed=is.true&at=gte.${since}&limit=${limitTotal + 2}`);
+  return { perIp: mine.length, total: all.length };
+}
+
 // ---------- Supabase Storage: приватные bucket receipts (чеки) и invoices (счета) ----------
 // Последний аргумент — имя bucket, по умолчанию receipts.
 
