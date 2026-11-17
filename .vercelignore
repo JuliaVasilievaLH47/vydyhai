@@ -4,3 +4,7 @@ security audit*.md
 security-audit*.md
 audits/
 tests
+# L3: документация, схема БД и миграции не выкладываются на сайт
+*.md
+*.sql
+migrations
